@@ -45,7 +45,8 @@
 
         <!-- 이미지 공간 -->
         <div class="flex justify-center">
-            <img src="KakaoTalk_Photo_2024-10-08-02-21-07.jpeg" alt="첨부 이미지" class="w-full bg-gray-200 rounded-md object-cover">
+            <img src="KakaoTalk_Photo_2024-10-08-02-21-07.jpeg" alt="첨부 이미지"
+                class="w-full bg-gray-200 rounded-md object-cover">
         </div>
 
         <form id="suggestionForm">
@@ -150,9 +151,9 @@
                 const lastSubmission = await getLastSubmission(userIdentifier);
                 const now = new Date();
 
-                if (lastSubmission && (now - lastSubmission) < (20 * 60 * 1000)) {
-                    console.log("20분 내 재제출 시도");
-                    alert('20분 쿨타임');
+                if (lastSubmission && (now - lastSubmission) < (1 * 60 * 1000)) {
+                    console.log("1분 내 재제출 시도");
+                    alert('1분 쿨타임');
                     submitButton.disabled = false;  // 제출 버튼 다시 활성화
                     spinner.classList.add('hidden');  // 스피너 숨기기
                     buttonText.classList.remove('hidden');  // 텍스트 복구
