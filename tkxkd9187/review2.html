@@ -11,6 +11,7 @@
 <body class="bg-gray-100">
     <div class="container mx-auto p-4">
         <!-- <h1 class="text-3xl font-bold mb-6 text-center">review</h1> -->
+        <h2 id="suggestionsCount" class="text-xl font-bold mb-4 text-center"></h2>
         <div id="suggestionsList" class="space-y-4"></div>
     </div>
 
@@ -42,25 +43,31 @@
             showError("로그인에 실패했습니다. 페이지를 새로고침 해주세요.");
         });
 
-        async function loadSuggestions() {
-            try {
-                const q = query(collection(db, 'suggestions'), orderBy('timestamp', 'desc'));
-                const querySnapshot = await getDocs(q);
-                suggestionsList.innerHTML = '';
-                if (querySnapshot.empty) {
-                    suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 건의사항이 없습니다.</p>';
-                } else {
-                    querySnapshot.forEach((doc) => {
-                        const suggestionData = doc.data();
-                        const suggestionElement = createSuggestionElement(suggestionData, doc.id);
-                        suggestionsList.appendChild(suggestionElement);
-                    });
-                }
-            } catch (error) {
-                console.error("건의 목록 로딩 실패:", error);
-                showError("건의 목록을 불러오는 데 실패했습니다. 나중에 다시 시도해 주세요.");
-            }
+async function loadSuggestions() {
+    try {
+        const q = query(collection(db, 'suggestions'), orderBy('timestamp', 'desc'));
+        const querySnapshot = await getDocs(q);
+        suggestionsList.innerHTML = '';
+
+        // 건의사항 개수 표시
+        const suggestionsCountElement = document.getElementById('suggestionsCount');
+        suggestionsCountElement.textContent = `총 ${querySnapshot.size}개 QnA`;
+
+        if (querySnapshot.empty) {
+            suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 QnA가 없습니다.</p>';
+        } else {
+            querySnapshot.forEach((doc) => {
+                const suggestionData = doc.data();
+                const suggestionElement = createSuggestionElement(suggestionData, doc.id);
+                suggestionsList.appendChild(suggestionElement);
+            });
         }
+    } catch (error) {
+        console.error("건의 목록 로딩 실패:", error);
+        showError("건의 목록을 불러오는 데 실패했습니다. 나중에 다시 시도해 주세요.");
+    }
+}
+
 
         function createSuggestionElement(data, docId) {
             const element = document.createElement('div');
