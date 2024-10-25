@@ -45,7 +45,7 @@
 
         <!-- 이미지 공간 -->
         <div class="flex justify-center">
-            <img src="11.jpeg" alt="첨부 이미지"
+            <img src="33.jpeg" alt="첨부 이미지"
                 class="w-full bg-gray-200 rounded-md object-cover">
         </div>
 
@@ -151,9 +151,9 @@
                 const lastSubmission = await getLastSubmission(userIdentifier);
                 const now = new Date();
 
-                if (lastSubmission && (now - lastSubmission) < (30 * 60 * 1000)) {
-                    console.log("30분 내 재제출 시도");
-                    alert('30분 내 중복제출 불가');
+                if (lastSubmission && (now - lastSubmission) < (5 * 60 * 1000)) {
+                    console.log("5분 내 재제출 시도");
+                    alert('5분 내 중복제출 불가');
                     submitButton.disabled = false;  // 제출 버튼 다시 활성화
                     spinner.classList.add('hidden');  // 스피너 숨기기
                     buttonText.classList.remove('hidden');  // 텍스트 복구
