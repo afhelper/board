@@ -45,7 +45,7 @@
 
 async function loadSuggestions() {
     try {
-        const q = query(collection(db, 'suggestions'), orderBy('timestamp', 'desc'));
+        const q = query(collection(db, 'suggestions2'), orderBy('timestamp', 'desc'));
         const querySnapshot = await getDocs(q);
         suggestionsList.innerHTML = '';
 
@@ -121,7 +121,7 @@ async function loadSuggestions() {
             }
 
             try {
-                await deleteDoc(doc(db, 'suggestions', docId));
+                await deleteDoc(doc(db, 'suggestions2', docId));
                 console.log("건의사항 삭제 성공");
                 loadSuggestions();  // 삭제 후 목록 새로고침
             } catch (error) {
