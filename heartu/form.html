@@ -170,7 +170,7 @@
             buttonText.classList.add('hidden');  // 텍스트 숨기기
 
             // 최종 제출될 텍스트 생성 (@멤버이름 + 메시지)
-            const finalSuggestion = `@${selectedMember}<br>${suggestionText}`;
+            const finalSuggestion = `@${selectedMember}\n${suggestionText}`;
 
             try {
                 const userIdentifier = await getUserIdentifier();
