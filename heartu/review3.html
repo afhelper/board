@@ -16,7 +16,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, query, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js"; // deleteDoc는 사용하지 않으므로 제거 가능
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
         const firebaseConfig = {
@@ -50,18 +50,18 @@
                 suggestionsList.innerHTML = '';
                 totalSuggestions = querySnapshot.size;
 
-                // 건의사항 개수 표시
                 const suggestionsCountElement = document.getElementById('suggestionsCount');
                 suggestionsCountElement.textContent = `총 ${totalSuggestions}개 QnA`;
 
                 if (querySnapshot.empty) {
                     suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 QnA가 없습니다.</p>';
                 } else {
-                    let index = 0;
-                    querySnapshot.forEach((doc) => {
+                    let index = 0; // forEach 루프 내에서 1부터 시작하도록 수정
+                    querySnapshot.forEach((docSnapshot) => { // doc 대신 docSnapshot 사용 (위의 doc과 충돌 방지)
                         index++;
-                        const suggestionData = doc.data();
-                        const suggestionElement = createSuggestionElement(suggestionData, doc.id, index, totalSuggestions);
+                        const suggestionData = docSnapshot.data();
+                        // createSuggestionElement에 전달하는 index는 현재 화면에 표시되는 순서 (1부터 시작, 최신글이 1번)
+                        const suggestionElement = createSuggestionElement(suggestionData, docSnapshot.id, index, totalSuggestions);
                         suggestionsList.appendChild(suggestionElement);
                     });
                 }
@@ -71,7 +71,7 @@
             }
         }
 
-        function createSuggestionElement(data, docId, currentIndex, totalCount) {
+        function createSuggestionElement(data, docId, displayIndex, totalCount) {
             const element = document.createElement('div');
             element.className = 'bg-white shadow-md rounded-lg p-4';
             const content = escapeHtml(data.content);
@@ -79,7 +79,7 @@
                 <p class="text-lg mb-2">${content}</p>
                 <div class="flex justify-end items-center">
                     <span class="text-sm text-gray-500">${formatTimestamp(data.timestamp.toDate())}</span>
-                    <button onclick="copySuggestion('${docId}', ${currentIndex}, ${totalCount})" class="ml-4 bg-green-500 text-white px-3 py-1 rounded">복사</button>
+                    <button onclick="copySuggestion(this, '${docId}', ${displayIndex}, ${totalCount})" class="ml-4 bg-green-500 text-white px-3 py-1 rounded">복사</button>
                 </div>
             `;
             return element;
@@ -107,56 +107,44 @@
             });
         }
 
-        function showError(message) {
+        function showError(message, isSuccess = false) {
             const errorElement = document.createElement('div');
-            errorElement.className = 'bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4';
+            errorElement.className = `${isSuccess ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'} px-4 py-3 rounded relative mb-4`;
             errorElement.innerHTML = message;
-            suggestionsList.insertBefore(errorElement, suggestionsList.firstChild);
-            setTimeout(() => errorElement.remove(), 5000);
+            
+            // 메시지가 중앙 상단에 나타나도록 스타일 추가
+            errorElement.style.position = 'fixed';
+            errorElement.style.top = '20px';
+            errorElement.style.left = '50%';
+            errorElement.style.transform = 'translateX(-50%)';
+            errorElement.style.zIndex = '1000';
+            errorElement.style.padding = '10px 20px';
+            errorElement.style.borderRadius = '5px';
+            
+            document.body.appendChild(errorElement); // suggestionsList 대신 body에 추가하여 다른 요소에 가려지지 않도록 함
+            setTimeout(() => errorElement.remove(), 3000); // 3초 후 메시지 자동 제거
         }
-
-        window.copySuggestion = async function (docId, currentIndex, totalCount) {
+        
+        // 전역 함수로 copySuggestion 수정
+        // displayIndex는 화면에 표시된 순서 (최신글이 1번)
+        window.copySuggestion = async function (buttonElement, docId, displayIndex, totalCount) {
             try {
-                // Firestore에서 해당 문서의 내용을 다시 가져옵니다.
-                // 여기서는 간단하게 현재 요소의 텍스트를 사용하지만,
-                // 실제로는 Firestore에서 데이터를 가져오는 것이 더 정확합니다.
-                // 여기서는 data.content가 필요하지만, createSuggestionElement 범위 밖입니다.
-                // 따라서, 버튼이 속한 div에서 p 태그의 내용을 가져오겠습니다.
-                const buttonElement = event.target;
                 const suggestionDiv = buttonElement.closest('.bg-white.shadow-md.rounded-lg.p-4');
                 const contentElement = suggestionDiv.querySelector('.text-lg.mb-2');
-                const originalContent = contentElement.textContent; // HTML 태그가 제거된 순수 텍스트
+                const originalContent = contentElement.textContent;
 
-                const textToCopy = `(${currentIndex}/${totalCount})\n${originalContent}`;
+                // 사용자가 원하는 순서로 변경: 최신글이 totalCount, 가장 오래된 글이 1
+                const actualDisplayOrder = totalCount - displayIndex + 1;
+
+                const textToCopy = `(${actualDisplayOrder}/${totalCount})\n${originalContent}`;
                 await navigator.clipboard.writeText(textToCopy);
-                showError('클립보드에 복사되었습니다!'); // 성공 메시지를 showError를 활용하여 표시 (스타일 재활용)
+                showError('클립보드에 복사되었습니다!', true); 
                 console.log("내용 복사 성공:", textToCopy);
             } catch (error) {
                 console.error("클립보드 복사 실패:", error);
                 showError("클립보드 복사에 실패했습니다.");
             }
         };
-
-        // 기존 deleteSuggestion 함수는 유지하거나 필요 없다면 삭제합니다.
-        // 만약 삭제 기능도 유지하고 싶다면, createSuggestionElement에 삭제 버튼도 추가해야 합니다.
-        // 여기서는 요청에 따라 복사 버튼만 구현했습니다.
-        /*
-        window.deleteSuggestion = async function (docId) {
-            const confirmed = confirm("정말로 이 건의사항을 삭제하시겠습니까?");
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-                await deleteDoc(doc(db, 'suggestions', docId));
-                console.log("건의사항 삭제 성공");
-                loadSuggestions();
-            } catch (error) {
-                console.error("건의사항 삭제 실패:", error);
-                showError("건의사항을 삭제하는 데 실패했습니다. 나중에 다시 시도해 주세요.");
-            }
-        };
-        */
     </script>
 </body>
 
