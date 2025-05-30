@@ -24,9 +24,9 @@
 </head>
 
 <body
-    class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-blue-500 selection:text-white">
+    class="bg-gray-100 text-gray-800 min-h-[100dvh] flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-blue-500 selection:text-white">
 
-    <div class="bg-white shadow-xl rounded-xl p-6 sm:p-8 w-full max-w-2xl">
+    <div class="bg-white shadow-xl rounded-xl p-6 sm:p-8 w-full max-w-2xl flex flex-col">
         <img src="https://stimg.sooplive.co.kr/NORMAL_BBS/8/25442978/373368388097dff97.png" alt="로고"
             class="mx-auto mb-6 max-w-full">
 
@@ -34,16 +34,16 @@
             class="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400 text-base sm:text-lg mb-6 shadow-sm transition-all duration-150 ease-in-out">
 
         <div
-            class="overflow-x-auto rounded-lg shadow-md border border-gray-200 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto">
+            class="overflow-x-auto rounded-lg shadow-md border border-gray-200 overflow-y-auto min-h-[16rem] max-h-[50dvh] sm:max-h-[calc(100dvh-280px)]">
             <table id="songTable" class="w-full text-sm sm:text-base">
                 <thead class="sticky top-0 bg-gray-200 z-10">
                     <tr>
                         <th data-sort="price"
                             class="p-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-300 transition-colors duration-150 w-1/4 sm:w-1/5">
-                            개수</th>
+                            가격</th>
                         <th data-sort="title"
                             class="p-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-300 transition-colors duration-150">
-                            시그니처</th>
+                            곡 제목</th>
                     </tr>
                 </thead>
                 <tbody id="songList" class="divide-y divide-gray-200 bg-white">
