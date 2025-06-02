@@ -27,8 +27,7 @@
     class="bg-gray-100 text-gray-800 min-h-[100dvh] flex flex-col items-center justify-center p-4 sm:p-6 selection:bg-blue-500 selection:text-white">
 
     <div class="bg-white shadow-xl rounded-xl p-6 sm:p-8 w-full max-w-2xl flex flex-col">
-        <img src="logo.png" alt="로고"
-            class="mx-auto mb-6 max-w-full">
+        <img src="logo.png" alt="로고" class="mx-auto mb-6 max-w-full">
 
         <input type="text" id="searchInput" placeholder="곡 제목으로 검색 (예: 마티니)"
             class="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-400 text-base sm:text-lg mb-6 shadow-sm transition-all duration-150 ease-in-out">
@@ -53,8 +52,10 @@
         <p class="text-xs text-gray-500 text-center mt-4">총 <span id="songCount">0</span>개의 곡이 있습니다.</p>
     </div>
 
+
     <script>
         const rawSongData = `
+92 딱풀
 93 귀엽기만해선..
 97 카리나 닮았대
 101 괜찮아
@@ -365,6 +366,8 @@
         let isSortAscending = true;
         const songCountElement = document.getElementById('songCount');
 
+        const targetPrices = [122, 129, 144, 153, 302, 110, 113, 129, 198, 550, 301, 174, 828, 137, 213, 165, 210, 1102, 159, 282, 161, 190, 127, 1173, 1045, 1047, 120, 306, 337, 1228, 220, 168, 109, 1233, 2047, 97, 162, 163, 195, 1340, 312, 402, 125, 1098, 196, 164, 182, 172, 1158, 1225, 502, 167, 169, 1097, 183, 215, 93, 330, 1182, 92];
+
         function parseSongs() {
             const lines = rawSongData.trim().split('\n');
             const songPattern = /^(\d+)\s+(.+)$/;
@@ -378,6 +381,7 @@
             songCountElement.textContent = songs.length;
         }
 
+        // ✨ 수정된 displaySongs 함수 ✨
         function displaySongs(songsToDisplay) {
             const songListElement = document.getElementById('songList');
             songListElement.innerHTML = '';
@@ -394,10 +398,23 @@
             songsToDisplay.forEach(song => {
                 const row = songListElement.insertRow();
                 row.className = 'hover:bg-gray-50 transition-colors duration-150 ease-in-out';
+
                 const priceCell = row.insertCell();
                 const titleCell = row.insertCell();
-                priceCell.textContent = song.price;
+
+                // 가격 텍스트를 먼저 추가 (뱃지와 공간을 두기 위해)
+                priceCell.appendChild(document.createTextNode(song.price));
                 priceCell.className = 'p-3 text-gray-700';
+
+                // targetPrices에 포함된 가격이면 "New!" 뱃지 추가
+                if (targetPrices.includes(song.price)) {
+                    const newBadge = document.createElement('span');
+                    newBadge.textContent = 'New!';
+                    // Tailwind CSS를 사용한 뱃지 스타일링
+                    newBadge.className = 'bg-red-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full ml-2 align-middle';
+                    priceCell.appendChild(newBadge); // 가격 셀에 뱃지 추가
+                }
+
                 titleCell.textContent = song.title;
                 titleCell.className = 'p-3 text-gray-900';
             });
@@ -427,28 +444,19 @@
                 currentSortColumn = column;
             }
 
-            const sortedSongs = [...songs];
-
-            sortedSongs.sort((a, b) => {
+            const songsToSort = [...songs];
+            songsToSort.sort((a, b) => {
                 let valA = a[column];
                 let valB = b[column];
-
                 if (typeof valA === 'string') {
                     valA = valA.toLowerCase();
                     valB = valB.toLowerCase();
                 }
-
-                if (valA < valB) {
-                    return isSortAscending ? -1 : 1;
-                }
-                if (valA > valB) {
-                    return isSortAscending ? 1 : -1;
-                }
+                if (valA < valB) return isSortAscending ? -1 : 1;
+                if (valA > valB) return isSortAscending ? 1 : -1;
                 return 0;
             });
-
-            songs = sortedSongs;
-
+            songs = songsToSort;
             updateSortIndicators();
             filterAndDisplaySongs();
         }
@@ -456,7 +464,6 @@
         function filterAndDisplaySongs() {
             const searchInput = document.getElementById('searchInput');
             const searchTerm = searchInput.value.toLowerCase().trim();
-
             const filteredSongs = songs.filter(song => {
                 return song.title.toLowerCase().includes(searchTerm);
             });
@@ -466,16 +473,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             parseSongs();
             sortSongs(currentSortColumn, true);
-
             const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', () => {
-                const searchTerm = searchInput.value.toLowerCase().trim();
-                const filteredSongsFromSorted = songs.filter(song => {
-                    return song.title.toLowerCase().includes(searchTerm);
-                });
-                displaySongs(filteredSongsFromSorted);
-            });
-
+            searchInput.addEventListener('input', filterAndDisplaySongs);
             document.querySelectorAll('#songTable th').forEach(headerCell => {
                 headerCell.addEventListener('click', () => {
                     const columnToSort = headerCell.dataset.sort;
