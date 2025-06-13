@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0" /> -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>확인 페이지</title>
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+        />
+        <style>
+            body {
+                touch-action: manipulation;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100dvh;
+                /* dvh 사용으로 모바일 동적 뷰포트 대응 */
+                background-color: #f0f4f8;
+                font-family: "Inter", sans-serif;
+                margin: 0;
+            }
+
+            .suggestion-container {
+                width: 600px;
+                height: 460px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                background-color: #ffffff;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                position: relative;
+            }
+
+            .suggestion-index {
+                font-size: 1.5rem;
+                color: #555555;
+                position: absolute;
+                top: 1rem;
+                width: 100%;
+                text-align: center;
+            }
+
+            .suggestion-content {
+                font-size: 2rem;
+                color: #333333;
+                margin-bottom: 1.5rem;
+                max-height: calc(100% - 6rem);
+                overflow: hidden;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .suggestion-timestamp {
+                font-size: 0.875rem;
+                color: #888888;
+                position: absolute;
+                bottom: 1rem;
+                width: 100%;
+                text-align: center;
+            }
+
+            .button-container {
+                position: absolute;
+                bottom: 3rem;
+                width: 100%;
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                padding: 0 1rem;
+            }
+
+            /* --- 플로팅 점프 컨테이너 스타일 --- */
+            .floating-jump-container {
+                position: fixed;
+                bottom: 20px;
+                right: 10px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                background-color: rgba(255, 255, 255, 0.9);
+                padding: 8px;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+                z-index: 1000;
+                transition:
+                    opacity 0.3s ease,
+                    transform 0.3s ease;
+                opacity: 0;
+                transform: translateY(20px);
+                pointer-events: none;
+                /* 숨겨져 있을 때 클릭 방지 */
+            }
+
+            .floating-jump-container.visible {
+                opacity: 1;
+                transform: translateY(0);
+                pointer-events: auto;
+                /* 보일 때 다시 활성화 */
+            }
+
+            .jump-input {
+                width: 100px;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 1rem;
+                -moz-appearance: textfield;
+                appearance: none;
+                /* Firefox에서 화살표 숨기기 */
+            }
+
+            .jump-input::-webkit-outer-spin-button,
+            .jump-input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                /* Chrome, Safari 등에서 화살표 숨기기 */
+                margin: 0;
+            }
+
+            .jump-button {
+                background-color: #007bff;
+                color: white;
+                width: 40px;
+                height: 40px;
+                border-radius: 8px;
+                border: none;
+                font-size: 1rem;
+                cursor: pointer;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                transition: background-color 0.3s ease;
+            }
+
+            .jump-button:hover {
+                background-color: #0056b3;
+            }
+
+            /* --- --- */
+
+            .next-button,
+            .prev-button {
+                background-color: #007bff;
+                color: #ffffff;
+                padding: 0.75rem 1.5rem;
+                border-radius: 5px;
+                font-size: 1rem;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+            }
+
+            .tts-button {
+                background-color: #cccccc;
+                color: #ffffff;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                font-size: 1.25rem;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border: none;
+            }
+
+            .next-button:hover,
+            .prev-button:hover,
+            .tts-button:hover {
+                background-color: #0056b3;
+            }
+
+            .tts-button:hover {
+                background-color: #5a6268;
+            }
+
+            .next-button:disabled,
+            .prev-button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="suggestion-container">
+            <div id="suggestionIndex" class="suggestion-index"></div>
+            <div id="suggestionContent" class="suggestion-content mx-5"></div>
+            <div id="suggestionTimestamp" class="suggestion-timestamp"></div>
+            <div class="button-container">
+                <button id="prevButton" class="prev-button" disabled>
+                    이전
+                </button>
+                <button id="ttsButton" class="tts-button">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <button id="nextButton" class="next-button">다음</button>
+            </div>
+        </div>
+
+        <div id="floatingJumpContainer" class="floating-jump-container">
+            <input
+                type="number"
+                id="jumpInput"
+                class="jump-input"
+                placeholder="번호로 이동"
+            />
+            <button id="jumpButton" class="jump-button">
+                <i class="fas fa-angle-right"></i>
+            </button>
+        </div>
+
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+            import {
+                getFirestore,
+                collection,
+                getDocs,
+            } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+            import {
+                getAuth,
+                signInAnonymously,
+            } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+
+            // --- 유틸리티 함수: 디바운싱 ---
+            function debounce(func, delay) {
+                let timeout;
+                return function (...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
+                };
+            }
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyBeIPr1H_de7eIZUagNAUvPbw-rYRteP9U",
+                authDomain: "submit-33eb1.firebaseapp.com",
+                projectId: "submit-33eb1",
+                storageBucket: "submit-33eb1.appspot.com",
+                messagingSenderId: "123176179541",
+                appId: "1:123176179541:web:c40f2392c8b95fb93601dc",
+            };
+
+            const GOOGLE_TTS_API_KEY =
+                "AIzaSyB-DBR-CSkgk5z87BYvBJTbEhRcZR3eXLg";
+            const GOOGLE_TTS_API_URL = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`;
+
+            let currentAudio = null;
+            let isSpeaking = false;
+
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth();
+
+            signInAnonymously(auth)
+                .then(() => {
+                    console.log("익명 사용자로 로그인 성공");
+
+                    const suggestionIndex =
+                        document.getElementById("suggestionIndex");
+                    const suggestionContent =
+                        document.getElementById("suggestionContent");
+                    const suggestionTimestamp = document.getElementById(
+                        "suggestionTimestamp",
+                    );
+                    const nextButton = document.getElementById("nextButton");
+                    const prevButton = document.getElementById("prevButton");
+                    const ttsButton = document.getElementById("ttsButton");
+                    const ttsButtonIcon = ttsButton.querySelector("i");
+
+                    // 플로팅 UI 요소 가져오기
+                    const floatingJumpContainer = document.getElementById(
+                        "floatingJumpContainer",
+                    );
+                    const jumpInput = document.getElementById("jumpInput");
+                    const jumpButton = document.getElementById("jumpButton");
+
+                    function setPauseIcon() {
+                        ttsButtonIcon.classList.remove("fa-volume-up");
+                        ttsButtonIcon.classList.add("fa-pause");
+                    }
+
+                    function setPlayIcon() {
+                        ttsButtonIcon.classList.remove("fa-pause");
+                        ttsButtonIcon.classList.add("fa-volume-up");
+                    }
+
+                    function stopCurrentAudio() {
+                        if (currentAudio) {
+                            currentAudio.pause();
+                            currentAudio = null;
+                        }
+                        isSpeaking = false;
+                        setPlayIcon();
+                    }
+
+                    async function speakCurrentSuggestion() {
+                        stopCurrentAudio();
+                        let textToRead = suggestionContent.textContent;
+                        if (!textToRead) return;
+
+                        if (textToRead.startsWith("@")) {
+                            textToRead = textToRead.substring(1);
+                        }
+
+                        try {
+                            const response = await fetch(GOOGLE_TTS_API_URL, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    input: { text: textToRead },
+                                    voice: {
+                                        languageCode: "ko-KR",
+                                        name: "ko-KR-Standard-A",
+                                    },
+                                    audioConfig: { audioEncoding: "MP3" },
+                                }),
+                            });
+                            if (!response.ok)
+                                throw new Error(
+                                    `TTS API Error: ${response.statusText}`,
+                                );
+                            const data = await response.json();
+                            if (data.audioContent) {
+                                currentAudio = new Audio(
+                                    `data:audio/mp3;base64,${data.audioContent}`,
+                                );
+                                currentAudio.onplay = () => {
+                                    isSpeaking = true;
+                                    setPauseIcon();
+                                };
+                                currentAudio.onpause = () => {
+                                    isSpeaking = false;
+                                    setPlayIcon();
+                                };
+                                currentAudio.onended = () => {
+                                    stopCurrentAudio();
+                                };
+                                currentAudio.play();
+                            }
+                        } catch (error) {
+                            console.error(
+                                "Google TTS 음성 변환 중 오류 발생:",
+                                error,
+                            );
+                            stopCurrentAudio();
+                        }
+                    }
+
+                    const debouncedSpeak = debounce(
+                        speakCurrentSuggestion,
+                        200,
+                    );
+
+                    function displaySuggestion(
+                        index,
+                        suggestionsArray,
+                        totalSuggestions,
+                    ) {
+                        if (index >= 0 && index < totalSuggestions) {
+                            suggestionIndex.textContent = `${index + 1}/${totalSuggestions}`;
+                            suggestionContent.textContent =
+                                suggestionsArray[index].content;
+                            suggestionTimestamp.textContent = `제출 시간: ${suggestionsArray[index].timestamp}`;
+                            suggestionContent.style.fontSize =
+                                suggestionsArray[index].content.length > 120
+                                    ? "1.5rem"
+                                    : "2rem";
+                        }
+                    }
+
+                    async function loadSuggestions() {
+                        try {
+                            const querySnapshot = await getDocs(
+                                collection(db, "suggestions"),
+                            );
+                            const suggestionsArray = [];
+                            querySnapshot.forEach((doc) => {
+                                const suggestionData = doc.data();
+                                suggestionsArray.push({
+                                    content: suggestionData.content,
+                                    timestamp:
+                                        suggestionData.timestamp.toDate(),
+                                });
+                            });
+
+                            suggestionsArray.sort(
+                                (a, b) => a.timestamp - b.timestamp,
+                            );
+                            suggestionsArray.forEach((suggestion) => {
+                                suggestion.timestamp = formatTimestamp(
+                                    suggestion.timestamp,
+                                );
+                            });
+
+                            let currentIndex = -1;
+                            const totalSuggestions = suggestionsArray.length;
+
+                            function updateView() {
+                                stopCurrentAudio();
+
+                                if (currentIndex === -1) {
+                                    suggestionIndex.textContent = "";
+                                    suggestionContent.textContent =
+                                        "준비가 되면 '다음' 버튼을 눌러주세요.";
+                                    suggestionTimestamp.textContent = "";
+                                    suggestionContent.style.fontSize = "2rem";
+                                    prevButton.style.display = "none";
+                                    ttsButton.style.display = "none";
+                                    floatingJumpContainer.classList.remove(
+                                        "visible",
+                                    ); // 플로팅 UI 숨기기
+                                } else {
+                                    prevButton.style.display = "";
+                                    ttsButton.style.display = "";
+                                    floatingJumpContainer.classList.add(
+                                        "visible",
+                                    ); // 플로팅 UI 보이기
+                                    displaySuggestion(
+                                        currentIndex,
+                                        suggestionsArray,
+                                        totalSuggestions,
+                                    );
+                                    ttsButton.disabled = false;
+                                    debouncedSpeak();
+                                }
+
+                                prevButton.disabled = currentIndex <= 0;
+                                nextButton.disabled =
+                                    currentIndex >= totalSuggestions - 1;
+                            }
+
+                            updateView();
+
+                            nextButton.addEventListener("click", () => {
+                                currentIndex++;
+                                updateView();
+                            });
+
+                            prevButton.addEventListener("click", () => {
+                                currentIndex--;
+                                updateView();
+                            });
+
+                            // 점프 버튼 이벤트 리스너
+                            jumpButton.addEventListener("click", () => {
+                                const pageNumber = parseInt(
+                                    jumpInput.value,
+                                    10,
+                                );
+                                if (
+                                    !isNaN(pageNumber) &&
+                                    pageNumber >= 1 &&
+                                    pageNumber <= totalSuggestions
+                                ) {
+                                    currentIndex = pageNumber - 1;
+                                    updateView();
+                                    jumpInput.value = "";
+                                    jumpInput.blur(); // 입력 후 키보드 숨기기 (모바일)
+                                } else {
+                                    alert(
+                                        `1부터 ${totalSuggestions} 사이의 번호를 입력해주세요.`,
+                                    );
+                                    jumpInput.value = "";
+                                }
+                            });
+
+                            // 점프 입력 필드 엔터 키 이벤트 리스너
+                            jumpInput.addEventListener("keydown", (event) => {
+                                // 눌린 키가 'Enter'가 맞는지 확인
+                                if (event.key === "Enter") {
+                                    // 엔터 키의 기본 동작(예: 폼 제출)을 막음
+                                    event.preventDefault();
+                                    // '이동' 버튼을 강제로 클릭시킴
+                                    jumpButton.click();
+                                }
+                            });
+
+                            ttsButton.addEventListener("click", () => {
+                                if (!suggestionContent.textContent) return;
+                                if (currentAudio && !currentAudio.ended) {
+                                    if (isSpeaking) currentAudio.pause();
+                                    else currentAudio.play();
+                                } else {
+                                    speakCurrentSuggestion();
+                                }
+                            });
+                        } catch (error) {
+                            console.error(
+                                "목록을 가져오는 중 오류 발생:",
+                                error,
+                            );
+                            suggestionContent.textContent =
+                                "목록을 가져오는 중 오류가 발생했습니다.";
+                        }
+                    }
+
+                    loadSuggestions();
+                })
+                .catch((error) => {
+                    console.error("익명 사용자로 로그인 중 오류 발생:", error);
+                });
+
+            function formatTimestamp(date) {
+                let year = date.getFullYear().toString();
+                let month = String(date.getMonth() + 1).padStart(2, "0");
+                let day = String(date.getDate()).padStart(2, "0");
+                let hours = String(date.getHours()).padStart(2, "0");
+                let minutes = String(date.getMinutes()).padStart(2, "0");
+                let seconds = String(date.getSeconds()).padStart(2, "0");
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            }
+        </script>
+    </body>
+</html>
