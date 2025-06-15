@@ -239,8 +239,7 @@
             appId: "1:123176179541:web:c40f2392c8b95fb93601dc",
         };
 
-
-        const GOOGLE_TTS_API_URL = "https://asia-northeast3-submit-33eb1.cloudfunctions.net/googleTTS";
+        const CLOUD_FUNCTION_URL = "https://asia-northeast3-submit-33eb1.cloudfunctions.net/googleTTS";
 
         let currentAudio = null;
         let isSpeaking = false;
@@ -264,8 +263,6 @@
                 const prevButton = document.getElementById("prevButton");
                 const ttsButton = document.getElementById("ttsButton");
                 const ttsButtonIcon = ttsButton.querySelector("i");
-
-                // 플로팅 UI 요소 가져오기
                 const floatingJumpContainer = document.getElementById(
                     "floatingJumpContainer",
                 );
@@ -291,6 +288,7 @@
                     setPlayIcon();
                 }
 
+                // 2. 이 함수가 우리가 만든 Cloud Function을 호출하게 돼.
                 async function speakCurrentSuggestion() {
                     stopCurrentAudio();
                     let textToRead = suggestionContent.textContent;
@@ -301,21 +299,16 @@
                     }
 
                     try {
-                        const response = await fetch(GOOGLE_TTS_API_URL, {
+                        const response = await fetch(CLOUD_FUNCTION_URL, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                input: { text: textToRead },
-                                voice: {
-                                    languageCode: "ko-KR",
-                                    name: "ko-KR-Standard-A",
-                                },
-                                audioConfig: { audioEncoding: "MP3" },
+                                text: textToRead,
                             }),
                         });
                         if (!response.ok)
                             throw new Error(
-                                `TTS API Error: ${response.statusText}`,
+                                `Cloud Function Error: ${response.statusText}`,
                             );
                         const data = await response.json();
                         if (data.audioContent) {
@@ -337,7 +330,7 @@
                         }
                     } catch (error) {
                         console.error(
-                            "Google TTS 음성 변환 중 오류 발생:",
+                            "Cloud Function 호출 중 오류 발생:",
                             error,
                         );
                         stopCurrentAudio();
@@ -406,13 +399,13 @@
                                 ttsButton.style.display = "none";
                                 floatingJumpContainer.classList.remove(
                                     "visible",
-                                ); // 플로팅 UI 숨기기
+                                );
                             } else {
                                 prevButton.style.display = "";
                                 ttsButton.style.display = "";
                                 floatingJumpContainer.classList.add(
                                     "visible",
-                                ); // 플로팅 UI 보이기
+                                );
                                 displaySuggestion(
                                     currentIndex,
                                     suggestionsArray,
@@ -439,7 +432,6 @@
                             updateView();
                         });
 
-                        // 점프 버튼 이벤트 리스너
                         jumpButton.addEventListener("click", () => {
                             const pageNumber = parseInt(
                                 jumpInput.value,
@@ -453,7 +445,7 @@
                                 currentIndex = pageNumber - 1;
                                 updateView();
                                 jumpInput.value = "";
-                                jumpInput.blur(); // 입력 후 키보드 숨기기 (모바일)
+                                jumpInput.blur();
                             } else {
                                 alert(
                                     `1부터 ${totalSuggestions} 사이의 번호를 입력해주세요.`,
@@ -462,13 +454,9 @@
                             }
                         });
 
-                        // 점프 입력 필드 엔터 키 이벤트 리스너
                         jumpInput.addEventListener("keydown", (event) => {
-                            // 눌린 키가 'Enter'가 맞는지 확인
                             if (event.key === "Enter") {
-                                // 엔터 키의 기본 동작(예: 폼 제출)을 막음
                                 event.preventDefault();
-                                // '이동' 버튼을 강제로 클릭시킴
                                 jumpButton.click();
                             }
                         });
