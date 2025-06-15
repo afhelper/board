@@ -52,7 +52,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth();
-        const ADMIN_EMAIL = "goback@gif.com";
+        const ADMIN_EMAILS = ["goback@gif.com", "super_admin@admin.com"];
 
         // DOM 요소 가져오기
         const loginSection = document.getElementById('loginSection');
@@ -74,7 +74,7 @@
                 loginSection.classList.add('hidden');
                 contentSection.classList.remove('hidden');
 
-                const isAdmin = user.email === ADMIN_EMAIL;
+                const isAdmin = ADMIN_EMAILS.includes(user.email);
 
                 // 이전 리스너가 있다면 중지
                 if (unsubscribe) {
