@@ -70,40 +70,38 @@
         // --- 인증 상태 리스너 (핵심 로직) ---
         // --- 인증 상태 리스너 (핵심 로직) ---
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // 사용자가 로그인한 경우
+            // 💡💡💡 핵심 수정 부분 시작 💡💡💡
+            // 관리자 페이지에서는 사용자가 존재하고, '익명'이 아닐 때만 로그인 상태로 간주한다.
+            const isAdminLoggedIn = user && !user.isAnonymous;
+
+            if (isAdminLoggedIn) {
+                // 사용자가 로그인한 경우 (그리고 익명이 아닌 경우)
                 loginSection.classList.add('hidden');
                 contentSection.classList.remove('hidden');
 
                 const isAdmin = ADMIN_EMAILS.includes(user.email);
 
-                // 이전 리스너가 있다면 중지
                 if (unsubscribe) {
                     unsubscribe();
                 }
-                // 실시간 리스너 시작
                 listenForSuggestions(isAdmin);
 
             } else {
-                // 사용자가 로그아웃한 경우
-
-                // 💡💡💡 핵심 수정 부분 시작 💡💡💡
-                console.log("사용자 로그아웃됨. 리스너를 먼저 해제합니다.");
-
-                // 1. 실시간 리스너부터 확실하게 해제한다.
+                // 사용자가 로그아웃했거나, 익명 사용자인 경우
                 if (unsubscribe) {
                     unsubscribe();
                     unsubscribe = null;
                 }
 
-                // 2. 그 다음에 화면 UI를 변경한다.
                 loginSection.classList.remove('hidden');
                 contentSection.classList.add('hidden');
                 suggestionsList.innerHTML = ''; // 목록 초기화
                 suggestionsCountElement.textContent = ''; // 카운트 초기화
-                // 💡💡💡 핵심 수정 부분 끝 💡💡💡
             }
+            // 💡💡💡 핵심 수정 부분 끝 💡💡💡
         });
+
+
 
 
 
