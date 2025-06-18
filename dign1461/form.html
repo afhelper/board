@@ -73,7 +73,8 @@
         // Firebase SDK를 모듈로 import
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
         import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+        // onAuthStateChanged를 추가로 import
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
         console.log("Firebase 모듈 임포트 완료");
 
         const firebaseConfig = {
@@ -87,50 +88,42 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth();
 
         console.log("Firebase 초기화 완료");
 
-        async function getUserIdentifier() {
-            console.log("getUserIdentifier 함수 호출");
-            try {
-                // ✅ 핵심 수정: 현재 로그인된 사용자가 없을 때만 익명 로그인을 실행한다.
-                if (!auth.currentUser) {
-                    console.log("현재 사용자 없음. 익명 로그인 실행.");
-                    await signInAnonymously(auth);
-                }
-                // 이제 auth.currentUser는 관리자이거나 익명 사용자이므로 안전하게 uid를 가져올 수 있다.
-                const uid = auth.currentUser.uid;
-                console.log("가져온 사용자 uid:", uid);
-                return uid;
-            } catch (error) {
-                console.error("사용자 식별자 가져오기 오류:", error);
-                return "unknown";
-            }
-        }
-
-        async function getLastSubmission(userIdentifier) {
-            console.log("getLastSubmission 함수 호출", userIdentifier);
-            try {
-                const q = query(
-                    collection(db, 'suggestions2'),
-                    where('userIdentifier', '==', userIdentifier),
-                    orderBy('timestamp', 'desc'),
-                    limit(1)
-                );
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    console.log("마지막 제출 시간 찾음");
-                    const lastSubmissionData = querySnapshot.docs[0].data();
-                    const lastSubmissionTimestamp = lastSubmissionData.timestamp.toDate();
-                    return lastSubmissionTimestamp;
-                }
-                console.log("이전 제출 없음");
-                return null;
-            } catch (error) {
-                console.error("마지막 제출 시간 확인 오류:", error);
-                return null;
-            }
-        }
+        // --- 인증 처리를 위한 새로운 함수 ---
+        const getAuthenticatedUser = () => {
+            return new Promise((resolve, reject) => {
+                // onAuthStateChanged는 인증 상태가 변경될 때마다 호출되지만,
+                // 한번만 호출해서 현재 상태를 가져오기 위해 unsubscribe를 사용한다.
+                const unsubscribe = onAuthStateChanged(auth, (user) => {
+                    unsubscribe(); // 첫 상태를 받은 후 리스너를 제거하여 중복 호출 방지
+                    if (user) {
+                        // 이미 로그인된 사용자(관리자 또는 이전 익명 사용자)가 있으면 반환
+                        console.log("기존 사용자 확인:", user.uid);
+                        resolve(user);
+                    } else {
+                        // 로그인된 사용자가 없으면 익명으로 로그인
+                        console.log("로그인된 사용자 없음. 익명 로그인 시도.");
+                        signInAnonymously(auth)
+                            .then(userCredential => {
+                                console.log("새로운 익명 사용자 로그인 성공:", userCredential.user.uid);
+                                resolve(userCredential.user);
+                            })
+                            .catch(error => {
+                                console.error("익명 로그인 실패:", error);
+                                reject(error);
+                            });
+                    }
+                }, (error) => {
+                    // onAuthStateChanged 자체에서 에러가 발생한 경우
+                    console.error("onAuthStateChanged 에러:", error);
+                    unsubscribe();
+                    reject(error);
+                });
+            });
+        };
 
         // 폼 제출 이벤트 리스너 수정
         document.getElementById('suggestionForm').addEventListener('submit', async (e) => {
@@ -141,50 +134,64 @@
             const spinner = submitButton.querySelector('.spinner');
             const buttonText = submitButton.querySelector('.button-text');
 
-            submitButton.disabled = true;  // 제출 버튼 비활성화
-            spinner.classList.remove('hidden');  // 스피너 표시
-            buttonText.classList.add('hidden');  // 텍스트 숨기기
+            submitButton.disabled = true;
+            spinner.classList.remove('hidden');
+            buttonText.classList.add('hidden');
 
             const suggestion = document.getElementById('suggestion').value;
 
             try {
-                const userIdentifier = await getUserIdentifier();
+                // 1. 인증된 사용자 정보 가져오기 (가장 먼저 실행)
+                const user = await getAuthenticatedUser();
+                const userIdentifier = user.uid;
                 console.log("사용자 식별자:", userIdentifier);
 
-                const lastSubmission = await getLastSubmission(userIdentifier);
+                // 2. 마지막 제출 시간 확인
+                const q = query(
+                    collection(db, 'suggestions2'),
+                    where('userIdentifier', '==', userIdentifier),
+                    orderBy('timestamp', 'desc'),
+                    limit(1)
+                );
+                const querySnapshot = await getDocs(q);
                 const now = new Date();
 
-                if (lastSubmission && (now - lastSubmission) < (5 * 60 * 1000)) {
-                    console.log("5분 내 재제출 시도");
-                    alert('5분 내 중복제출 불가');
-                    submitButton.disabled = false;  // 제출 버튼 다시 활성화
-                    spinner.classList.add('hidden');  // 스피너 숨기기
-                    buttonText.classList.remove('hidden');  // 텍스트 복구
-                    return;
+                if (!querySnapshot.empty) {
+                    const lastSubmissionTimestamp = querySnapshot.docs[0].data().timestamp.toDate();
+                    if ((now - lastSubmissionTimestamp) < (5 * 60 * 1000)) { // 5분 쿨다운
+                        console.log("5분 내 재제출 시도");
+                        alert('5분 이내에는 한 번만 제출할 수 있습니다.');
+                        // finally 블록을 실행시키기 위해 여기서 return.
+                        // return을 해도 finally는 항상 실행된다.
+                        return;
+                    }
                 }
 
+                // 3. Firestore에 데이터 저장
                 console.log("Firestore에 저장 시도:", {
                     content: suggestion,
                     timestamp: serverTimestamp(),
                     userIdentifier: userIdentifier
                 });
 
-                const docRef = await addDoc(collection(db, 'suggestions2'), {
+                await addDoc(collection(db, 'suggestions2'), {
                     content: suggestion,
                     timestamp: serverTimestamp(),
                     userIdentifier: userIdentifier
                 });
 
-                console.log("문서 저장 완료. 문서 ID:", docRef.id);
+                console.log("문서 저장 완료.");
                 alert('성공적으로 제출되었습니다.');
                 document.getElementById('suggestion').value = '';
+
             } catch (error) {
                 console.error("오류 발생:", error);
                 alert('오류가 발생했습니다. 나중에 다시 시도해주세요.');
             } finally {
-                submitButton.disabled = false;  // 제출 버튼 다시 활성화
-                spinner.classList.add('hidden');  // 스피너 숨기기
-                buttonText.classList.remove('hidden');  // 텍스트 복구
+                // try 블록에서 return을 하더라도 이 부분은 실행된다.
+                submitButton.disabled = false;
+                spinner.classList.add('hidden');
+                buttonText.classList.remove('hidden');
             }
         });
 
