@@ -122,21 +122,26 @@
             signOut(auth);
         });
 
-        // --- 건의사항 실시간 리스닝 함수 ---
-        function listenForSuggestions(isAdmin) {
+
+        // admin.html 파일에서 수정해야 할 부분
+        function listenForSuggestions(isAdmin) { // isAdmin 파라미터는 더 이상 필요 없음
             const q = query(collection(db, 'suggestions2'), orderBy('timestamp', 'desc'));
 
-            // onSnapshot으로 실시간 업데이트 감지
             unsubscribe = onSnapshot(q, (querySnapshot) => {
                 suggestionsList.innerHTML = '';
                 suggestionsCountElement.textContent = `총 ${querySnapshot.size}개 QnA`;
+
+                // 현재 로그인된 사용자의 UID를 가져와서 관리자인지 다시 확인
+                const currentUser = auth.currentUser;
+                const currentIsAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email); // 여기서 다시 isAdmin을 계산
 
                 if (querySnapshot.empty) {
                     suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 QnA가 없습니다.</p>';
                 } else {
                     querySnapshot.forEach((doc) => {
                         const suggestionData = doc.data();
-                        const suggestionElement = createSuggestionElement(suggestionData, doc.id, isAdmin);
+                        // 새로 계산된 currentIsAdmin 값을 전달
+                        const suggestionElement = createSuggestionElement(suggestionData, doc.id, currentIsAdmin);
                         suggestionsList.appendChild(suggestionElement);
                     });
                 }
@@ -145,6 +150,8 @@
                 showError("건의 목록을 불러오는 데 실패했습니다.");
             });
         }
+
+
 
         // --- 건의사항 요소 생성 함수 ---
         function createSuggestionElement(data, docId, isAdmin) {
