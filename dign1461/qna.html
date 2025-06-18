@@ -219,6 +219,7 @@
         import {
             getAuth,
             signInAnonymously,
+            onAuthStateChanged, // onAuthStateChanged import 추가
         } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
         // --- 유틸리티 함수: 디바운싱 ---
@@ -248,243 +249,30 @@
         const db = getFirestore(app);
         const auth = getAuth();
 
-        signInAnonymously(auth)
-            .then(() => {
-                console.log("익명 사용자로 로그인 성공");
-
-                const suggestionIndex =
-                    document.getElementById("suggestionIndex");
-                const suggestionContent =
-                    document.getElementById("suggestionContent");
-                const suggestionTimestamp = document.getElementById(
-                    "suggestionTimestamp",
-                );
-                const nextButton = document.getElementById("nextButton");
-                const prevButton = document.getElementById("prevButton");
-                const ttsButton = document.getElementById("ttsButton");
-                const ttsButtonIcon = ttsButton.querySelector("i");
-                const floatingJumpContainer = document.getElementById(
-                    "floatingJumpContainer",
-                );
-                const jumpInput = document.getElementById("jumpInput");
-                const jumpButton = document.getElementById("jumpButton");
-
-                function setPauseIcon() {
-                    ttsButtonIcon.classList.remove("fa-volume-up");
-                    ttsButtonIcon.classList.add("fa-pause");
-                }
-
-                function setPlayIcon() {
-                    ttsButtonIcon.classList.remove("fa-pause");
-                    ttsButtonIcon.classList.add("fa-volume-up");
-                }
-
-                function stopCurrentAudio() {
-                    if (currentAudio) {
-                        currentAudio.pause();
-                        currentAudio = null;
-                    }
-                    isSpeaking = false;
-                    setPlayIcon();
-                }
-
-                // 2. 이 함수가 우리가 만든 Cloud Function을 호출하게 돼.
-                async function speakCurrentSuggestion() {
-                    stopCurrentAudio();
-                    let textToRead = suggestionContent.textContent;
-                    if (!textToRead) return;
-
-                    if (textToRead.startsWith("@")) {
-                        textToRead = textToRead.substring(1);
-                    }
-
-                    try {
-                        const response = await fetch(CLOUD_FUNCTION_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                text: textToRead,
-                            }),
-                        });
-                        if (!response.ok)
-                            throw new Error(
-                                `Cloud Function Error: ${response.statusText}`,
-                            );
-                        const data = await response.json();
-                        if (data.audioContent) {
-                            currentAudio = new Audio(
-                                `data:audio/mp3;base64,${data.audioContent}`,
-                            );
-                            currentAudio.onplay = () => {
-                                isSpeaking = true;
-                                setPauseIcon();
-                            };
-                            currentAudio.onpause = () => {
-                                isSpeaking = false;
-                                setPlayIcon();
-                            };
-                            currentAudio.onended = () => {
-                                stopCurrentAudio();
-                            };
-                            currentAudio.play();
-                        }
-                    } catch (error) {
-                        console.error(
-                            "Cloud Function 호출 중 오류 발생:",
-                            error,
-                        );
-                        stopCurrentAudio();
-                    }
-                }
-
-                const debouncedSpeak = debounce(
-                    speakCurrentSuggestion,
-                    200,
-                );
-
-                function displaySuggestion(
-                    index,
-                    suggestionsArray,
-                    totalSuggestions,
-                ) {
-                    if (index >= 0 && index < totalSuggestions) {
-                        suggestionIndex.textContent = `${index + 1}/${totalSuggestions}`;
-                        suggestionContent.textContent =
-                            suggestionsArray[index].content;
-                        suggestionTimestamp.textContent = `제출 시간: ${suggestionsArray[index].timestamp}`;
-                        suggestionContent.style.fontSize =
-                            suggestionsArray[index].content.length > 120
-                                ? "1.5rem"
-                                : "2rem";
-                    }
-                }
-
-                async function loadSuggestions() {
-                    try {
-                        const querySnapshot = await getDocs(
-                            collection(db, "suggestions2"),
-                        );
-                        const suggestionsArray = [];
-                        querySnapshot.forEach((doc) => {
-                            const suggestionData = doc.data();
-                            suggestionsArray.push({
-                                content: suggestionData.content,
-                                timestamp:
-                                    suggestionData.timestamp.toDate(),
-                            });
-                        });
-
-                        suggestionsArray.sort(
-                            (a, b) => a.timestamp - b.timestamp,
-                        );
-                        suggestionsArray.forEach((suggestion) => {
-                            suggestion.timestamp = formatTimestamp(
-                                suggestion.timestamp,
-                            );
-                        });
-
-                        let currentIndex = -1;
-                        const totalSuggestions = suggestionsArray.length;
-
-                        function updateView() {
-                            stopCurrentAudio();
-
-                            if (currentIndex === -1) {
-                                suggestionIndex.textContent = "";
-                                suggestionContent.textContent =
-                                    "준비가 되면 '다음' 버튼을 눌러주세요.";
-                                suggestionTimestamp.textContent = "";
-                                suggestionContent.style.fontSize = "2rem";
-                                prevButton.style.display = "none";
-                                ttsButton.style.display = "none";
-                                floatingJumpContainer.classList.remove(
-                                    "visible",
-                                );
-                            } else {
-                                prevButton.style.display = "";
-                                ttsButton.style.display = "";
-                                floatingJumpContainer.classList.add(
-                                    "visible",
-                                );
-                                displaySuggestion(
-                                    currentIndex,
-                                    suggestionsArray,
-                                    totalSuggestions,
-                                );
-                                ttsButton.disabled = false;
-                                debouncedSpeak();
-                            }
-
-                            prevButton.disabled = currentIndex <= 0;
-                            nextButton.disabled =
-                                currentIndex >= totalSuggestions - 1;
-                        }
-
-                        updateView();
-
-                        nextButton.addEventListener("click", () => {
-                            currentIndex++;
-                            updateView();
-                        });
-
-                        prevButton.addEventListener("click", () => {
-                            currentIndex--;
-                            updateView();
-                        });
-
-                        jumpButton.addEventListener("click", () => {
-                            const pageNumber = parseInt(
-                                jumpInput.value,
-                                10,
-                            );
-                            if (
-                                !isNaN(pageNumber) &&
-                                pageNumber >= 1 &&
-                                pageNumber <= totalSuggestions
-                            ) {
-                                currentIndex = pageNumber - 1;
-                                updateView();
-                                jumpInput.value = "";
-                                jumpInput.blur();
-                            } else {
-                                alert(
-                                    `1부터 ${totalSuggestions} 사이의 번호를 입력해주세요.`,
-                                );
-                                jumpInput.value = "";
-                            }
-                        });
-
-                        jumpInput.addEventListener("keydown", (event) => {
-                            if (event.key === "Enter") {
-                                event.preventDefault();
-                                jumpButton.click();
-                            }
-                        });
-
-                        ttsButton.addEventListener("click", () => {
-                            if (!suggestionContent.textContent) return;
-                            if (currentAudio && !currentAudio.ended) {
-                                if (isSpeaking) currentAudio.pause();
-                                else currentAudio.play();
-                            } else {
-                                speakCurrentSuggestion();
-                            }
-                        });
-                    } catch (error) {
-                        console.error(
-                            "목록을 가져오는 중 오류 발생:",
-                            error,
-                        );
-                        suggestionContent.textContent =
-                            "목록을 가져오는 중 오류가 발생했습니다.";
-                    }
-                }
-
+        // 💡💡💡 핵심 수정 부분 시작 💡💡💡
+        onAuthStateChanged(auth, (user) => {
+            const suggestionContent = document.getElementById("suggestionContent");
+            if (user) {
+                // 사용자가 이미 로그인되어 있으면(관리자 또는 익명) 바로 글을 로드
+                console.log("사용자 확인됨:", user.uid);
                 loadSuggestions();
-            })
-            .catch((error) => {
-                console.error("익명 사용자로 로그인 중 오류 발생:", error);
-            });
+            } else {
+                // 로그인된 사용자가 없으면 익명으로 로그인
+                signInAnonymously(auth)
+                    .then(() => {
+                        console.log("새로운 익명 사용자로 로그인 성공");
+                        loadSuggestions();
+                    })
+                    .catch((error) => {
+                        console.error("익명 사용자로 로그인 중 오류 발생:", error);
+                        if (suggestionContent) {
+                            suggestionContent.textContent = "페이지를 로드하는 중 오류가 발생했습니다.";
+                        }
+                    });
+            }
+        });
+        // 💡💡💡 핵심 수정 부분 끝 💡💡💡
+
 
         function formatTimestamp(date) {
             let year = date.getFullYear().toString();
@@ -494,6 +282,230 @@
             let minutes = String(date.getMinutes()).padStart(2, "0");
             let seconds = String(date.getSeconds()).padStart(2, "0");
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // loadSuggestions 함수는 DOM 요소를 사용하므로, DOM이 로드된 후에 호출되어야 한다.
+        // onAuthStateChanged 콜백 안에서 호출되므로 DOM 로드는 보장된다.
+        async function loadSuggestions() {
+            // DOM 요소들을 이 함수 안에서 가져오도록 변경하여 null 에러 방지
+            const suggestionIndex = document.getElementById("suggestionIndex");
+            const suggestionContent = document.getElementById("suggestionContent");
+            const suggestionTimestamp = document.getElementById("suggestionTimestamp");
+            const nextButton = document.getElementById("nextButton");
+            const prevButton = document.getElementById("prevButton");
+            const ttsButton = document.getElementById("ttsButton");
+            const ttsButtonIcon = ttsButton.querySelector("i");
+            const floatingJumpContainer = document.getElementById("floatingJumpContainer");
+            const jumpInput = document.getElementById("jumpInput");
+            const jumpButton = document.getElementById("jumpButton");
+
+            function setPauseIcon() {
+                ttsButtonIcon.classList.remove("fa-volume-up");
+                ttsButtonIcon.classList.add("fa-pause");
+            }
+
+            function setPlayIcon() {
+                ttsButtonIcon.classList.remove("fa-pause");
+                ttsButtonIcon.classList.add("fa-volume-up");
+            }
+
+            function stopCurrentAudio() {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                isSpeaking = false;
+                setPlayIcon();
+            }
+
+            async function speakCurrentSuggestion() {
+                stopCurrentAudio();
+                let textToRead = suggestionContent.textContent;
+                if (!textToRead) return;
+
+                if (textToRead.startsWith("@")) {
+                    textToRead = textToRead.substring(1);
+                }
+
+                try {
+                    const response = await fetch(CLOUD_FUNCTION_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            text: textToRead,
+                        }),
+                    });
+                    if (!response.ok)
+                        throw new Error(
+                            `Cloud Function Error: ${response.statusText}`,
+                        );
+                    const data = await response.json();
+                    if (data.audioContent) {
+                        currentAudio = new Audio(
+                            `data:audio/mp3;base64,${data.audioContent}`,
+                        );
+                        currentAudio.onplay = () => {
+                            isSpeaking = true;
+                            setPauseIcon();
+                        };
+                        currentAudio.onpause = () => {
+                            isSpeaking = false;
+                            setPlayIcon();
+                        };
+                        currentAudio.onended = () => {
+                            stopCurrentAudio();
+                        };
+                        currentAudio.play();
+                    }
+                } catch (error) {
+                    console.error(
+                        "Cloud Function 호출 중 오류 발생:",
+                        error,
+                    );
+                    stopCurrentAudio();
+                }
+            }
+
+            const debouncedSpeak = debounce(
+                speakCurrentSuggestion,
+                200,
+            );
+
+            function displaySuggestion(
+                index,
+                suggestionsArray,
+                totalSuggestions,
+            ) {
+                if (index >= 0 && index < totalSuggestions) {
+                    suggestionIndex.textContent = `${index + 1}/${totalSuggestions}`;
+                    suggestionContent.textContent =
+                        suggestionsArray[index].content;
+                    suggestionTimestamp.textContent = `제출 시간: ${suggestionsArray[index].timestamp}`;
+                    suggestionContent.style.fontSize =
+                        suggestionsArray[index].content.length > 120
+                            ? "1.5rem"
+                            : "2rem";
+                }
+            }
+
+            try {
+                const querySnapshot = await getDocs(
+                    collection(db, "suggestions2"),
+                );
+                const suggestionsArray = [];
+                querySnapshot.forEach((doc) => {
+                    const suggestionData = doc.data();
+                    suggestionsArray.push({
+                        content: suggestionData.content,
+                        timestamp:
+                            suggestionData.timestamp.toDate(),
+                    });
+                });
+
+                suggestionsArray.sort(
+                    (a, b) => a.timestamp - b.timestamp,
+                );
+                suggestionsArray.forEach((suggestion) => {
+                    suggestion.timestamp = formatTimestamp(
+                        suggestion.timestamp,
+                    );
+                });
+
+                let currentIndex = -1;
+                const totalSuggestions = suggestionsArray.length;
+
+                function updateView() {
+                    stopCurrentAudio();
+
+                    if (currentIndex === -1) {
+                        suggestionIndex.textContent = "";
+                        suggestionContent.textContent =
+                            "준비가 되면 '다음' 버튼을 눌러주세요.";
+                        suggestionTimestamp.textContent = "";
+                        suggestionContent.style.fontSize = "2rem";
+                        prevButton.style.display = "none";
+                        ttsButton.style.display = "none";
+                        floatingJumpContainer.classList.remove(
+                            "visible",
+                        );
+                    } else {
+                        prevButton.style.display = "";
+                        ttsButton.style.display = "";
+                        floatingJumpContainer.classList.add(
+                            "visible",
+                        );
+                        displaySuggestion(
+                            currentIndex,
+                            suggestionsArray,
+                            totalSuggestions,
+                        );
+                        ttsButton.disabled = false;
+                        debouncedSpeak();
+                    }
+
+                    prevButton.disabled = currentIndex <= 0;
+                    nextButton.disabled =
+                        currentIndex >= totalSuggestions - 1;
+                }
+
+                updateView();
+
+                nextButton.addEventListener("click", () => {
+                    currentIndex++;
+                    updateView();
+                });
+
+                prevButton.addEventListener("click", () => {
+                    currentIndex--;
+                    updateView();
+                });
+
+                jumpButton.addEventListener("click", () => {
+                    const pageNumber = parseInt(
+                        jumpInput.value,
+                        10,
+                    );
+                    if (
+                        !isNaN(pageNumber) &&
+                        pageNumber >= 1 &&
+                        pageNumber <= totalSuggestions
+                    ) {
+                        currentIndex = pageNumber - 1;
+                        updateView();
+                        jumpInput.value = "";
+                        jumpInput.blur();
+                    } else {
+                        alert(
+                            `1부터 ${totalSuggestions} 사이의 번호를 입력해주세요.`,
+                        );
+                        jumpInput.value = "";
+                    }
+                });
+
+                jumpInput.addEventListener("keydown", (event) => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        jumpButton.click();
+                    }
+                });
+
+                ttsButton.addEventListener("click", () => {
+                    if (!suggestionContent.textContent) return;
+                    if (currentAudio && !currentAudio.ended) {
+                        if (isSpeaking) currentAudio.pause();
+                        else currentAudio.play();
+                    } else {
+                        speakCurrentSuggestion();
+                    }
+                });
+            } catch (error) {
+                console.error(
+                    "목록을 가져오는 중 오류 발생:",
+                    error,
+                );
+                suggestionContent.textContent =
+                    "목록을 가져오는 중 오류가 발생했습니다.";
+            }
         }
     </script>
 </body>
