@@ -93,10 +93,14 @@
         async function getUserIdentifier() {
             console.log("getUserIdentifier 함수 호출");
             try {
-                const auth = getAuth();
-                const userCredential = await signInAnonymously(auth);
-                const uid = userCredential.user.uid;
-                console.log("사용자 uid:", uid);
+                // ✅ 핵심 수정: 현재 로그인된 사용자가 없을 때만 익명 로그인을 실행한다.
+                if (!auth.currentUser) {
+                    console.log("현재 사용자 없음. 익명 로그인 실행.");
+                    await signInAnonymously(auth);
+                }
+                // 이제 auth.currentUser는 관리자이거나 익명 사용자이므로 안전하게 uid를 가져올 수 있다.
+                const uid = auth.currentUser.uid;
+                console.log("가져온 사용자 uid:", uid);
                 return uid;
             } catch (error) {
                 console.error("사용자 식별자 가져오기 오류:", error);
