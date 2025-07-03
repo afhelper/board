@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QnA 관리자 페이지</title>
+    <title>review - Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 
@@ -68,43 +68,34 @@
         let unsubscribe = null; // onSnapshot 리스너를 관리하기 위한 변수
 
         // --- 인증 상태 리스너 (핵심 로직) ---
-        // --- 인증 상태 리스너 (핵심 로직) ---
         onAuthStateChanged(auth, (user) => {
-            // 💡💡💡 핵심 수정 부분 시작 💡💡💡
-            // 관리자 페이지에서는 사용자가 존재하고, '익명'이 아닐 때만 로그인 상태로 간주한다.
-            const isAdminLoggedIn = user && !user.isAnonymous;
-
-            if (isAdminLoggedIn) {
-                // 사용자가 로그인한 경우 (그리고 익명이 아닌 경우)
+            if (user) {
+                // 사용자가 로그인한 경우
                 loginSection.classList.add('hidden');
                 contentSection.classList.remove('hidden');
 
                 const isAdmin = ADMIN_EMAILS.includes(user.email);
 
+                // 이전 리스너가 있다면 중지
                 if (unsubscribe) {
                     unsubscribe();
                 }
+                // 실시간 리스너 시작
                 listenForSuggestions(isAdmin);
 
             } else {
-                // 사용자가 로그아웃했거나, 익명 사용자인 경우
-                if (unsubscribe) {
-                    unsubscribe();
-                    unsubscribe = null;
-                }
-
+                // 사용자가 로그아웃한 경우
                 loginSection.classList.remove('hidden');
                 contentSection.classList.add('hidden');
                 suggestionsList.innerHTML = ''; // 목록 초기화
                 suggestionsCountElement.textContent = ''; // 카운트 초기화
+
+                // 리스너 중지
+                if (unsubscribe) {
+                    unsubscribe();
+                }
             }
-            // 💡💡💡 핵심 수정 부분 끝 💡💡💡
         });
-
-
-
-
-
 
         // --- 로그인 버튼 이벤트 ---
         loginButton.addEventListener('click', async () => {
@@ -131,26 +122,21 @@
             signOut(auth);
         });
 
+        // --- 건의사항 실시간 리스닝 함수 ---
+        function listenForSuggestions(isAdmin) {
+            const q = query(collection(db, 'suggestions'), orderBy('timestamp', 'desc'));
 
-        // admin.html 파일에서 수정해야 할 부분
-        function listenForSuggestions(isAdmin) { // isAdmin 파라미터는 더 이상 필요 없음
-            const q = query(collection(db, 'suggestions2'), orderBy('timestamp', 'desc'));
-
+            // onSnapshot으로 실시간 업데이트 감지
             unsubscribe = onSnapshot(q, (querySnapshot) => {
                 suggestionsList.innerHTML = '';
                 suggestionsCountElement.textContent = `총 ${querySnapshot.size}개 QnA`;
-
-                // 현재 로그인된 사용자의 UID를 가져와서 관리자인지 다시 확인
-                const currentUser = auth.currentUser;
-                const currentIsAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email); // 여기서 다시 isAdmin을 계산
 
                 if (querySnapshot.empty) {
                     suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 QnA가 없습니다.</p>';
                 } else {
                     querySnapshot.forEach((doc) => {
                         const suggestionData = doc.data();
-                        // 새로 계산된 currentIsAdmin 값을 전달
-                        const suggestionElement = createSuggestionElement(suggestionData, doc.id, currentIsAdmin);
+                        const suggestionElement = createSuggestionElement(suggestionData, doc.id, isAdmin);
                         suggestionsList.appendChild(suggestionElement);
                     });
                 }
@@ -159,8 +145,6 @@
                 showError("건의 목록을 불러오는 데 실패했습니다.");
             });
         }
-
-
 
         // --- 건의사항 요소 생성 함수 ---
         function createSuggestionElement(data, docId, isAdmin) {
@@ -187,7 +171,7 @@
             if (!confirm("정말로 이 건의사항을 삭제하시겠습니까?")) return;
 
             try {
-                await deleteDoc(doc(db, 'suggestions2', docId));
+                await deleteDoc(doc(db, 'suggestions', docId));
                 console.log("건의사항 삭제 성공");
                 // 삭제 후 목록 새로고침이 필요 없음! onSnapshot이 자동으로 감지해서 처리해줌.
             } catch (error) {
