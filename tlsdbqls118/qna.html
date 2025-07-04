@@ -287,15 +287,57 @@
         // loadSuggestions 함수는 DOM 요소를 사용하므로, DOM이 로드된 후에 호출되어야 한다.
         // onAuthStateChanged 콜백 안에서 호출되므로 DOM 로드는 보장된다.
         async function loadSuggestions() {
-            // DOM 요소들을 이 함수 안에서 가져오도록 변경하여 null 에러 방지
+            // DOM 요소들을 먼저 가져와야 시간 체크 로직에서 사용할 수 있어.
             const suggestionIndex = document.getElementById("suggestionIndex");
             const suggestionContent = document.getElementById("suggestionContent");
             const suggestionTimestamp = document.getElementById("suggestionTimestamp");
             const nextButton = document.getElementById("nextButton");
             const prevButton = document.getElementById("prevButton");
             const ttsButton = document.getElementById("ttsButton");
-            const ttsButtonIcon = ttsButton.querySelector("i");
             const floatingJumpContainer = document.getElementById("floatingJumpContainer");
+
+            // --- ✅ 최종 시간 체크 로직 ---
+            // 목표 시간: 2025년 7월 4일 오후 9시 (한국 표준시 기준)
+            const openTime = new Date('2025-07-04T21:00:00+09:00');
+            const now = new Date();
+
+            if (now < openTime) {
+                // 목표 시간 전일 경우, 안내 메시지 표시 및 버튼 숨기기
+                suggestionIndex.textContent = "준비 중";
+                suggestionContent.textContent = "지정한 시간에 공개됩니다.";
+                suggestionContent.style.fontSize = "2rem"; // 글자 크기 고정
+                nextButton.style.display = 'none';
+                prevButton.style.display = 'none';
+                ttsButton.style.display = 'none';
+                floatingJumpContainer.classList.remove('visible');
+
+                // 남은 시간을 표시하고 1초마다 업데이트하는 함수
+                const updateCountdown = () => {
+                    const now_update = new Date();
+                    // 시간이 되면 페이지를 새로고침
+                    if (now_update >= openTime) {
+                        clearInterval(countdownInterval);
+                        window.location.reload();
+                        return;
+                    }
+
+                    const timeRemaining = openTime.getTime() - now_update.getTime();
+                    const hours = String(Math.floor(timeRemaining / (1000 * 60 * 60))).padStart(2, '0');
+                    const minutes = String(Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+                    const seconds = String(Math.floor((timeRemaining % (1000 * 60)) / 1000)).padStart(2, '0');
+                    suggestionTimestamp.textContent = `공개까지 ${hours}:${minutes}:${seconds}`;
+                };
+
+                updateCountdown(); // 페이지 로드 시 즉시 한 번 실행
+                const countdownInterval = setInterval(updateCountdown, 1000); // 1초마다 업데이트
+
+                return; // 함수를 여기서 종료해서 아래의 질문 로드 로직이 실행되지 않게 함
+            }
+            // --- 시간 체크 로직 끝 ---
+
+
+            // --- 여기부터는 원래 있던 질문 표시 코드 ---
+            const ttsButtonIcon = ttsButton.querySelector("i");
             const jumpInput = document.getElementById("jumpInput");
             const jumpButton = document.getElementById("jumpButton");
 
@@ -507,6 +549,11 @@
                     "목록을 가져오는 중 오류가 발생했습니다.";
             }
         }
+
+
+
+
+
     </script>
 </body>
 
