@@ -74,14 +74,12 @@
                 loginSection.classList.add('hidden');
                 contentSection.classList.remove('hidden');
 
-                const isAdmin = ADMIN_EMAILS.includes(user.email);
-
                 // 이전 리스너가 있다면 중지
                 if (unsubscribe) {
                     unsubscribe();
                 }
                 // 실시간 리스너 시작
-                listenForSuggestions(isAdmin);
+                listenForSuggestions();
 
             } else {
                 // 사용자가 로그아웃한 경우
@@ -123,13 +121,17 @@
         });
 
         // --- 건의사항 실시간 리스닝 함수 ---
-        function listenForSuggestions(isAdmin) {
+        function listenForSuggestions() {
             const q = query(collection(db, 'suggestions'), orderBy('timestamp', 'desc'));
 
             // onSnapshot으로 실시간 업데이트 감지
             unsubscribe = onSnapshot(q, (querySnapshot) => {
                 suggestionsList.innerHTML = '';
                 suggestionsCountElement.textContent = `총 ${querySnapshot.size}개 QnA`;
+
+                // 실시간 업데이트 시점에도 현재 로그인 사용자를 확인
+                const user = auth.currentUser;
+                const isAdmin = user && ADMIN_EMAILS.includes(user.email);
 
                 if (querySnapshot.empty) {
                     suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 QnA가 없습니다.</p>';
