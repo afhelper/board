@@ -65,6 +65,17 @@
         const passwordInput = document.getElementById('password');
         const loginError = document.getElementById('loginError');
 
+        // --- 엔터 키로 로그인 처리 ---
+        [emailInput, passwordInput].forEach(input => {
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    // 기본 동작(예: 폼 제출)을 막을 필요는 없지만, 명시적으로 버튼 클릭을 트리거
+                    event.preventDefault();
+                    loginButton.click();
+                }
+            });
+        });
+
         let unsubscribe = null; // onSnapshot 리스너를 관리하기 위한 변수
 
         // --- 인증 상태 리스너 (핵심 로직) ---
