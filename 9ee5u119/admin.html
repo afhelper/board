@@ -133,6 +133,15 @@
                 const user = auth.currentUser;
                 const isAdmin = user && ADMIN_EMAILS.includes(user.email);
 
+                // --- 디버깅 로그 추가 ---
+                console.log("onSnapshot update triggered.");
+                console.log("Current user object:", user);
+                if (user) {
+                    console.log("Current user email:", user.email);
+                }
+                console.log("Is admin?", isAdmin);
+                // --- 디버깅 로그 끝 ---
+
                 if (querySnapshot.empty) {
                     suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 QnA가 없습니다.</p>';
                 } else {
