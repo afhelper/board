@@ -7,6 +7,7 @@
     <title>익명 QnA</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css" rel="stylesheet">
     <style>
         body {
             touch-action: manipulation;
@@ -302,36 +303,59 @@
             const now = new Date();
 
             if (now < openTime) {
-                // 목표 시간 전일 경우, 안내 메시지 표시 및 버튼 숨기기
-                suggestionIndex.textContent = "준비 중";
-                suggestionContent.textContent = "지정한 시간에 공개됩니다.";
-                suggestionContent.style.fontSize = "2rem"; // 글자 크기 고정
+                // 목표 시간 전일 경우, 카운트다운 표시
+                suggestionIndex.textContent = "공개까지 남은 시간";
+                suggestionTimestamp.textContent = "지정한 시간에 공개됩니다."; // 보조 텍스트
+
+                // 버튼 숨기기
                 nextButton.style.display = 'none';
                 prevButton.style.display = 'none';
                 ttsButton.style.display = 'none';
                 floatingJumpContainer.classList.remove('visible');
 
-                // 남은 시간을 표시하고 1초마다 업데이트하는 함수
+                // 카운트다운 스타일 적용
+                suggestionContent.style.fontFamily = "'DSEG7-Classic-Bold', monospace"; // 세븐 세그먼트 폰트로 변경 (이름 수정)
+                suggestionContent.style.fontWeight = 'normal'; // 폰트 자체에 굵기가 포함되어 있으므로 normal로 설정
+
+                // 화면 너비에 따라 폰트 크기 동적 조절
+                const setFontSize = () => {
+                    const screenWidth = window.innerWidth;
+                    if (screenWidth < 600) {
+                        suggestionContent.style.fontSize = '4rem';
+                    } else {
+                        suggestionContent.style.fontSize = '7rem';
+                    }
+                };
+
+                setFontSize(); // 초기 설정
+                window.addEventListener('resize', setFontSize); // 창 크기 변경 시 폰트 크기 재조정
+
+                suggestionContent.style.color = '#007bff';
+                suggestionContent.style.lineHeight = '1.2';
+
                 const updateCountdown = () => {
                     const now_update = new Date();
-                    // 시간이 되면 페이지를 새로고침
-                    if (now_update >= openTime) {
+                    const timeRemaining = openTime.getTime() - now_update.getTime();
+
+                    if (timeRemaining <= 0) {
+                        suggestionContent.textContent = "00:00:00";
                         clearInterval(countdownInterval);
+                        window.removeEventListener('resize', setFontSize); // 이벤트 리스너 정리
                         window.location.reload();
                         return;
                     }
 
-                    const timeRemaining = openTime.getTime() - now_update.getTime();
                     const hours = String(Math.floor(timeRemaining / (1000 * 60 * 60))).padStart(2, '0');
                     const minutes = String(Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
                     const seconds = String(Math.floor((timeRemaining % (1000 * 60)) / 1000)).padStart(2, '0');
-                    suggestionTimestamp.textContent = `공개까지 ${hours}:${minutes}:${seconds}`;
+
+                    suggestionContent.textContent = `${hours}:${minutes}:${seconds}`;
                 };
 
-                updateCountdown(); // 페이지 로드 시 즉시 한 번 실행
+                updateCountdown(); // 즉시 실행
                 const countdownInterval = setInterval(updateCountdown, 1000); // 1초마다 업데이트
 
-                return; // 함수를 여기서 종료해서 아래의 질문 로드 로직이 실행되지 않게 함
+                return; // 함수를 여기서 종료
             }
             // --- 시간 체크 로직 끝 ---
 
