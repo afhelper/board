@@ -7,7 +7,6 @@
     <title>익명 QnA</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/dseg@0.46.0/css/dseg.css" rel="stylesheet">
     <style>
         body {
             touch-action: manipulation;
@@ -15,7 +14,6 @@
             justify-content: center;
             align-items: center;
             height: 100dvh;
-            /* dvh 사용으로 모바일 동적 뷰포트 대응 */
             background-color: #f0f4f8;
             font-family: "Inter", sans-serif;
             margin: 0;
@@ -49,9 +47,9 @@
             color: #333333;
             margin-bottom: 1.5rem;
             max-height: calc(100% - 6rem);
-            overflow: hidden;
+            overflow-y: auto;
+            word-break: break-all;
             display: flex;
-            align-items: center;
             justify-content: center;
         }
 
@@ -74,62 +72,93 @@
             padding: 0 1rem;
         }
 
-        /* --- 플로팅 점프 컨테이너 스타일 --- */
-        .floating-jump-container {
-            position: fixed;
-            bottom: 20px;
-            right: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background-color: rgba(255, 255, 255, 0.9);
-            padding: 8px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            transition:
-                opacity 0.3s ease,
-                transform 0.3s ease;
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-            /* 숨겨져 있을 때 클릭 방지 */
+        /* --- 번호로 이동 모달 스타일 --- */
+        .jump-modal-trigger {
+            position: absolute;
+            top: 0.3rem;
+            right: 0.3rem;
+            background: none;
+            border: 1px solid #007bff;
+            color: #007bff;
+            padding: 3px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        .floating-jump-container.visible {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-            /* 보일 때 다시 활성화 */
+        .jump-modal-trigger:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .jump-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .jump-modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 300px;
+        }
+        
+        .jump-modal-content p {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .jump-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            color: #888;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .jump-modal-close:hover {
+            color: #333;
         }
 
         .jump-input {
-            width: 100px;
-            padding: 8px;
+            width: 100%;
+            padding: 10px;
             border: 1px solid #ccc;
             border-radius: 8px;
             text-align: center;
-            font-size: 1rem;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
             -moz-appearance: textfield;
-            appearance: none;
-            /* Firefox에서 화살표 숨기기 */
         }
 
         .jump-input::-webkit-outer-spin-button,
         .jump-input::-webkit-inner-spin-button {
             -webkit-appearance: none;
-            /* Chrome, Safari 등에서 화살표 숨기기 */
             margin: 0;
         }
 
         .jump-button {
             background-color: #007bff;
             color: white;
-            width: 40px;
-            height: 40px;
+            width: 100%;
+            height: 45px;
             border-radius: 8px;
             border: none;
-            font-size: 1rem;
+            font-size: 1.1rem;
             cursor: pointer;
             display: flex;
             justify-content: center;
@@ -190,6 +219,7 @@
 <body>
     <div class="suggestion-container">
         <div id="suggestionIndex" class="suggestion-index"></div>
+        <button id="openJumpModalButton" class="jump-modal-trigger" style="display: none;">번호로 이동</button>
         <div id="suggestionContent" class="suggestion-content mx-5"></div>
         <div id="suggestionTimestamp" class="suggestion-timestamp"></div>
         <div class="button-container">
@@ -203,11 +233,13 @@
         </div>
     </div>
 
-    <div id="floatingJumpContainer" class="floating-jump-container">
-        <input type="number" id="jumpInput" class="jump-input" placeholder="번호로 이동" />
-        <button id="jumpButton" class="jump-button">
-            <i class="fas fa-angle-right"></i>
-        </button>
+    <div id="jumpModal" class="jump-modal-overlay" style="display: none;">
+        <div class="jump-modal-content">
+            <span id="closeJumpModal" class="jump-modal-close">&times;</span>
+            <p>이동할 번호를 입력하세요</p>
+            <input type="number" id="jumpInput" class="jump-input" placeholder="번호 입력" />
+            <button id="jumpButton" class="jump-button">이동</button>
+        </div>
     </div>
 
     <script type="module">
@@ -220,10 +252,9 @@
         import {
             getAuth,
             signInAnonymously,
-            onAuthStateChanged, // onAuthStateChanged import 추가
+            onAuthStateChanged,
         } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
-        // --- 유틸리티 함수: 디바운싱 ---
         function debounce(func, delay) {
             let timeout;
             return function (...args) {
@@ -250,15 +281,12 @@
         const db = getFirestore(app);
         const auth = getAuth();
 
-        // 💡💡💡 핵심 수정 부분 시작 💡💡💡
         onAuthStateChanged(auth, (user) => {
             const suggestionContent = document.getElementById("suggestionContent");
             if (user) {
-                // 사용자가 이미 로그인되어 있으면(관리자 또는 익명) 바로 글을 로드
                 console.log("사용자 확인됨:", user.uid);
                 loadSuggestions();
             } else {
-                // 로그인된 사용자가 없으면 익명으로 로그인
                 signInAnonymously(auth)
                     .then(() => {
                         console.log("새로운 익명 사용자로 로그인 성공");
@@ -272,8 +300,6 @@
                     });
             }
         });
-        // 💡💡💡 핵심 수정 부분 끝 💡💡💡
-
 
         function formatTimestamp(date) {
             let year = date.getFullYear().toString();
@@ -285,83 +311,48 @@
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
 
-        // loadSuggestions 함수는 DOM 요소를 사용하므로, DOM이 로드된 후에 호출되어야 한다.
-        // onAuthStateChanged 콜백 안에서 호출되므로 DOM 로드는 보장된다.
         async function loadSuggestions() {
-            // DOM 요소들을 먼저 가져와야 시간 체크 로직에서 사용할 수 있어.
             const suggestionIndex = document.getElementById("suggestionIndex");
             const suggestionContent = document.getElementById("suggestionContent");
             const suggestionTimestamp = document.getElementById("suggestionTimestamp");
             const nextButton = document.getElementById("nextButton");
             const prevButton = document.getElementById("prevButton");
             const ttsButton = document.getElementById("ttsButton");
-            const floatingJumpContainer = document.getElementById("floatingJumpContainer");
+            const openJumpModalButton = document.getElementById("openJumpModalButton");
 
-            // --- ✅ 최종 시간 체크 로직 ---
-            // 목표 시간: 2025년 7월 4일 오후 9시 (한국 표준시 기준)
-            const openTime = new Date('2025-07-21T18:00:00+09:00');
+            const openTime = new Date('2025-07-20T18:00:00+09:00');
             const now = new Date();
 
             if (now < openTime) {
-                // 목표 시간 전일 경우, 카운트다운 표시
-                suggestionIndex.textContent = "공개까지 남은 시간";
-                suggestionTimestamp.textContent = "지정한 시간에 공개됩니다."; // 보조 텍스트
-
-                // 버튼 숨기기
+                suggestionIndex.textContent = "준비 중";
+                suggestionContent.textContent = "지정한 시간에 공개됩니다.";
+                suggestionContent.style.fontSize = "2rem";
                 nextButton.style.display = 'none';
                 prevButton.style.display = 'none';
                 ttsButton.style.display = 'none';
-                floatingJumpContainer.classList.remove('visible');
-
-                // 카운트다운 스타일 적용
-                suggestionContent.style.fontFamily = "'DSEG7-Classic-Bold', monospace"; // 세븐 세그먼트 폰트로 변경 (이름 수정)
-                suggestionContent.style.fontWeight = 'normal'; // 폰트 자체에 굵기가 포함되어 있으므로 normal로 설정
-
-                // 화면 너비에 따라 폰트 크기 동적 조절
-                const setFontSize = () => {
-                    const screenWidth = window.innerWidth;
-                    if (screenWidth < 600) {
-                        suggestionContent.style.fontSize = '4rem';
-                    } else {
-                        suggestionContent.style.fontSize = '7rem';
-                    }
-                };
-
-                setFontSize(); // 초기 설정
-                window.addEventListener('resize', setFontSize); // 창 크기 변경 시 폰트 크기 재조정
-
-                suggestionContent.style.color = '#007bff';
-                suggestionContent.style.lineHeight = '1.2';
+                openJumpModalButton.style.display = 'none';
 
                 const updateCountdown = () => {
                     const now_update = new Date();
-                    const timeRemaining = openTime.getTime() - now_update.getTime();
-
-                    if (timeRemaining <= 0) {
-                        suggestionContent.textContent = "00:00:00";
+                    if (now_update >= openTime) {
                         clearInterval(countdownInterval);
-                        window.removeEventListener('resize', setFontSize); // 이벤트 리스너 정리
                         window.location.reload();
                         return;
                     }
-
+                    const timeRemaining = openTime.getTime() - now_update.getTime();
                     const hours = String(Math.floor(timeRemaining / (1000 * 60 * 60))).padStart(2, '0');
                     const minutes = String(Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
                     const seconds = String(Math.floor((timeRemaining % (1000 * 60)) / 1000)).padStart(2, '0');
-
-                    suggestionContent.textContent = `${hours}:${minutes}:${seconds}`;
+                    suggestionTimestamp.textContent = `공개까지 ${hours}:${minutes}:${seconds}`;
                 };
-
-                updateCountdown(); // 즉시 실행
-                const countdownInterval = setInterval(updateCountdown, 1000); // 1초마다 업데이트
-
-                return; // 함수를 여기서 종료
+                updateCountdown();
+                const countdownInterval = setInterval(updateCountdown, 1000);
+                return;
             }
-            // --- 시간 체크 로직 끝 ---
 
-
-            // --- 여기부터는 원래 있던 질문 표시 코드 ---
             const ttsButtonIcon = ttsButton.querySelector("i");
+            const jumpModal = document.getElementById("jumpModal");
+            const closeJumpModal = document.getElementById("closeJumpModal");
             const jumpInput = document.getElementById("jumpInput");
             const jumpButton = document.getElementById("jumpButton");
 
@@ -388,93 +379,55 @@
                 stopCurrentAudio();
                 let textToRead = suggestionContent.textContent;
                 if (!textToRead) return;
-
                 if (textToRead.startsWith("@")) {
                     textToRead = textToRead.substring(1);
                 }
-
                 try {
                     const response = await fetch(CLOUD_FUNCTION_URL, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            text: textToRead,
-                        }),
+                        body: JSON.stringify({ text: textToRead }),
                     });
-                    if (!response.ok)
-                        throw new Error(
-                            `Cloud Function Error: ${response.statusText}`,
-                        );
+                    if (!response.ok) throw new Error(`Cloud Function Error: ${response.statusText}`);
                     const data = await response.json();
                     if (data.audioContent) {
-                        currentAudio = new Audio(
-                            `data:audio/mp3;base64,${data.audioContent}`,
-                        );
-                        currentAudio.onplay = () => {
-                            isSpeaking = true;
-                            setPauseIcon();
-                        };
-                        currentAudio.onpause = () => {
-                            isSpeaking = false;
-                            setPlayIcon();
-                        };
-                        currentAudio.onended = () => {
-                            stopCurrentAudio();
-                        };
+                        currentAudio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+                        currentAudio.onplay = () => { isSpeaking = true; setPauseIcon(); };
+                        currentAudio.onpause = () => { isSpeaking = false; setPlayIcon(); };
+                        currentAudio.onended = () => { stopCurrentAudio(); };
                         currentAudio.play();
                     }
                 } catch (error) {
-                    console.error(
-                        "Cloud Function 호출 중 오류 발생:",
-                        error,
-                    );
+                    console.error("Cloud Function 호출 중 오류 발생:", error);
                     stopCurrentAudio();
                 }
             }
 
-            const debouncedSpeak = debounce(
-                speakCurrentSuggestion,
-                200,
-            );
+            const debouncedSpeak = debounce(speakCurrentSuggestion, 200);
 
-            function displaySuggestion(
-                index,
-                suggestionsArray,
-                totalSuggestions,
-            ) {
+            function displaySuggestion(index, suggestionsArray, totalSuggestions) {
                 if (index >= 0 && index < totalSuggestions) {
                     suggestionIndex.textContent = `${index + 1}/${totalSuggestions}`;
-                    suggestionContent.textContent =
-                        suggestionsArray[index].content;
+                    suggestionContent.textContent = suggestionsArray[index].content;
                     suggestionTimestamp.textContent = `제출 시간: ${suggestionsArray[index].timestamp}`;
-                    suggestionContent.style.fontSize =
-                        suggestionsArray[index].content.length > 120
-                            ? "1.5rem"
-                            : "2rem";
+                    suggestionContent.style.fontSize = suggestionsArray[index].content.length > 120 ? "1.5rem" : "2rem";
                 }
             }
 
             try {
-                const querySnapshot = await getDocs(
-                    collection(db, "suggestions2"),
-                );
+                const querySnapshot = await getDocs(collection(db, "suggestions2"));
                 const suggestionsArray = [];
                 querySnapshot.forEach((doc) => {
                     const suggestionData = doc.data();
                     suggestionsArray.push({
                         content: suggestionData.content,
-                        timestamp:
-                            suggestionData.timestamp.toDate(),
+                        timestamp: suggestionData.timestamp.toDate(),
                     });
                 });
 
-                suggestionsArray.sort(
-                    (a, b) => a.timestamp - b.timestamp,
-                );
+                suggestionsArray.sort((a, b) => a.timestamp - b.timestamp);
                 suggestionsArray.forEach((suggestion) => {
-                    suggestion.timestamp = formatTimestamp(
-                        suggestion.timestamp,
-                    );
+                    suggestion.timestamp = formatTimestamp(suggestion.timestamp);
                 });
 
                 let currentIndex = -1;
@@ -482,36 +435,24 @@
 
                 function updateView() {
                     stopCurrentAudio();
-
                     if (currentIndex === -1) {
                         suggestionIndex.textContent = "";
-                        suggestionContent.textContent =
-                            "준비가 되면 '다음' 버튼을 눌러주세요.";
+                        suggestionContent.textContent = "준비가 되면 '다음' 버튼을 눌러주세요.";
                         suggestionTimestamp.textContent = "";
                         suggestionContent.style.fontSize = "2rem";
                         prevButton.style.display = "none";
                         ttsButton.style.display = "none";
-                        floatingJumpContainer.classList.remove(
-                            "visible",
-                        );
+                        openJumpModalButton.style.display = "none";
                     } else {
                         prevButton.style.display = "";
                         ttsButton.style.display = "";
-                        floatingJumpContainer.classList.add(
-                            "visible",
-                        );
-                        displaySuggestion(
-                            currentIndex,
-                            suggestionsArray,
-                            totalSuggestions,
-                        );
+                        openJumpModalButton.style.display = "block";
+                        displaySuggestion(currentIndex, suggestionsArray, totalSuggestions);
                         ttsButton.disabled = false;
                         debouncedSpeak();
                     }
-
                     prevButton.disabled = currentIndex <= 0;
-                    nextButton.disabled =
-                        currentIndex >= totalSuggestions - 1;
+                    nextButton.disabled = currentIndex >= totalSuggestions - 1;
                 }
 
                 updateView();
@@ -526,24 +467,30 @@
                     updateView();
                 });
 
+                openJumpModalButton.addEventListener("click", () => {
+                    jumpModal.style.display = "flex";
+                    jumpInput.focus();
+                });
+
+                closeJumpModal.addEventListener("click", () => {
+                    jumpModal.style.display = "none";
+                });
+                
+                jumpModal.addEventListener("click", (event) => {
+                    if (event.target === jumpModal) {
+                        jumpModal.style.display = "none";
+                    }
+                });
+
                 jumpButton.addEventListener("click", () => {
-                    const pageNumber = parseInt(
-                        jumpInput.value,
-                        10,
-                    );
-                    if (
-                        !isNaN(pageNumber) &&
-                        pageNumber >= 1 &&
-                        pageNumber <= totalSuggestions
-                    ) {
+                    const pageNumber = parseInt(jumpInput.value, 10);
+                    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalSuggestions) {
                         currentIndex = pageNumber - 1;
                         updateView();
                         jumpInput.value = "";
-                        jumpInput.blur();
+                        jumpModal.style.display = "none";
                     } else {
-                        alert(
-                            `1부터 ${totalSuggestions} 사이의 번호를 입력해주세요.`,
-                        );
+                        alert(`1부터 ${totalSuggestions} 사이의 번호를 입력해주세요.`);
                         jumpInput.value = "";
                     }
                 });
@@ -565,19 +512,10 @@
                     }
                 });
             } catch (error) {
-                console.error(
-                    "목록을 가져오는 중 오류 발생:",
-                    error,
-                );
-                suggestionContent.textContent =
-                    "목록을 가져오는 중 오류가 발생했습니다.";
+                console.error("목록을 가져오는 중 오류 발생:", error);
+                suggestionContent.textContent = "목록을 가져오는 중 오류가 발생했습니다.";
             }
         }
-
-
-
-
-
     </script>
 </body>
 
