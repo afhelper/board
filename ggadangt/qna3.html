@@ -60,7 +60,7 @@
             font-size: 2rem;
             color: #333333;
             margin-bottom: 1.5rem;
-            max-height: calc(100% - 6rem);
+            max-height: 100%;
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -443,14 +443,26 @@
                     function adjustFontToFit() {
                         const el = suggestionContent;
                         if (!el || !el.textContent) return;
+
+                        // 사용 가능한 높이 계산: 컨테이너 높이 - 인덱스/타임스탬프/버튼 영역
+                        const containerH = qnaContainer.clientHeight;
+                        const indexH = suggestionIndex?.offsetHeight || 0;
+                        const tsH = suggestionTimestamp?.offsetHeight || 0;
+                        const btnH = buttonContainer?.offsetHeight || 0;
+                        const verticalGaps = 32; // 여백 보정
+                        const available = Math.max(80, containerH - indexH - tsH - btnH - verticalGaps);
+
+                        el.style.maxHeight = available + 'px';
+
                         const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
                         const maxPx = Math.round(2 * rootPx);   // 2rem
                         const minPx = Math.round(1 * rootPx);   // 1rem
                         let sizePx = maxPx;
                         el.style.fontSize = sizePx + 'px';
                         let guard = 0;
-                        // 줄이기: 넘치지 않을 때까지 1px씩 축소
-                        while (el.scrollHeight > el.clientHeight && sizePx > minPx && guard < 100) {
+
+                        // 넘치지 않을 때까지 1px 단위로 축소
+                        while (el.scrollHeight > el.clientHeight && sizePx > minPx && guard < 200) {
                             sizePx -= 1;
                             el.style.fontSize = sizePx + 'px';
                             guard++;
