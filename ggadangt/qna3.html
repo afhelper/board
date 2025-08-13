@@ -65,6 +65,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .suggestion-timestamp {
@@ -419,6 +421,11 @@
                         200,
                     );
 
+                    // 창 크기 변경 시 현재 문항에 맞춰 폰트 재조정
+                    window.addEventListener('resize', debounce(() => {
+                        if (currentIndex >= 0) adjustFontToFit();
+                    }, 150));
+
                     function displaySuggestion(
                         index,
                         suggestionsArray,
@@ -429,10 +436,24 @@
                             suggestionContent.textContent =
                                 suggestionsArray[index].content;
                             suggestionTimestamp.textContent = `제출 시간: ${suggestionsArray[index].timestamp}`;
-                            suggestionContent.style.fontSize =
-                                suggestionsArray[index].content.length > 120
-                                    ? "1.5rem"
-                                    : "2rem";
+                            adjustFontToFit();
+                        }
+                    }
+
+                    function adjustFontToFit() {
+                        const el = suggestionContent;
+                        if (!el || !el.textContent) return;
+                        const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                        const maxPx = Math.round(2 * rootPx);   // 2rem
+                        const minPx = Math.round(1 * rootPx);   // 1rem
+                        let sizePx = maxPx;
+                        el.style.fontSize = sizePx + 'px';
+                        let guard = 0;
+                        // 줄이기: 넘치지 않을 때까지 1px씩 축소
+                        while (el.scrollHeight > el.clientHeight && sizePx > minPx && guard < 100) {
+                            sizePx -= 1;
+                            el.style.fontSize = sizePx + 'px';
+                            guard++;
                         }
                     }
 
