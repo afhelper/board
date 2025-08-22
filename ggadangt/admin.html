@@ -48,6 +48,8 @@
             appId: "1:123176179541:web:c40f2392c8b95fb93601dc"
         };
 
+        const COLLECTION_NAME = "suggestions"; // 🔥 새 변수 추가
+
         // Firebase 앱 초기화
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -139,7 +141,7 @@
 
         // --- 건의사항 실시간 리스닝 함수 ---
         function listenForSuggestions() {
-            const q = query(collection(db, 'suggestions'), orderBy('timestamp', 'desc'));
+            const q = query(collection(db, COLLECTION_NAME), orderBy('timestamp', 'desc'));
 
             // onSnapshot으로 실시간 업데이트 감지
             unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -199,7 +201,7 @@
             if (!confirm("정말로 이 건의사항을 삭제하시겠습니까?")) return;
 
             try {
-                await deleteDoc(doc(db, 'suggestions', docId));
+                await deleteDoc(doc(db, COLLECTION_NAME, docId));
                 console.log("건의사항 삭제 성공");
                 // 삭제 후 목록 새로고침이 필요 없음! onSnapshot이 자동으로 감지해서 처리해줌.
             } catch (error) {

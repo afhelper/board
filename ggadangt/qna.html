@@ -60,11 +60,13 @@
             font-size: 2rem;
             color: #333333;
             margin-bottom: 1.5rem;
-            max-height: calc(100% - 6rem);
+            max-height: 100%;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .suggestion-timestamp {
@@ -153,6 +155,28 @@
             background-color: #0056b3;
         }
 
+        /* TTS + 자동읽기 그룹: 나란히 배치 */
+        .tts-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 자동 읽기 칩: 스피커 버튼 오른쪽 */
+        .auto-read-mini {
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #333;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+        }
+        .auto-read-mini input { margin: 0; }
+
         /* --- --- */
 
         .next-button,
@@ -179,6 +203,7 @@
             justify-content: center;
             align-items: center;
             border: none;
+            position: relative; /* for mini toggle positioning */
         }
 
         .next-button:hover,
@@ -215,9 +240,15 @@
             <button id="prevButton" class="prev-button" disabled>
                 이전
             </button>
-            <button id="ttsButton" class="tts-button">
-                <i class="fas fa-volume-up"></i>
-            </button>
+            <div class="tts-group">
+                <button id="ttsButton" class="tts-button">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <label id="autoReadLabel" class="auto-read-mini" title="이동 시 자동으로 읽기">
+                    <input type="checkbox" id="autoReadToggle" />
+                    자동 읽기
+                </label>
+            </div>
             <button id="nextButton" class="next-button">다음</button>
         </div>
     </div>
@@ -227,6 +258,7 @@
         <button id="jumpButton" class="jump-button">
             <i class="fas fa-angle-right"></i>
         </button>
+        
     </div>
 
     <script type="module">
@@ -274,6 +306,7 @@
             };
 
             const CLOUD_FUNCTION_URL = "https://asia-northeast3-submit-33eb1.cloudfunctions.net/googleTTS";
+            const COLLECTION_NAME = "suggestions"; // 🔥 새 변수 추가
 
             let currentAudio = null;
             let isSpeaking = false;
@@ -297,11 +330,25 @@
                     const prevButton = document.getElementById("prevButton");
                     const ttsButton = document.getElementById("ttsButton");
                     const ttsButtonIcon = ttsButton.querySelector("i");
+                    const buttonContainer = document.querySelector(".button-container");
                     const floatingJumpContainer = document.getElementById(
                         "floatingJumpContainer",
                     );
                     const jumpInput = document.getElementById("jumpInput");
                     const jumpButton = document.getElementById("jumpButton");
+                    const autoReadToggle = document.getElementById("autoReadToggle");
+                    const autoReadLabel = document.getElementById("autoReadLabel");
+
+                    // 자동 읽기 상태(기본: 끔), localStorage로 유지
+                    const storedAutoRead = localStorage.getItem("autoReadEnabled");
+                    let autoReadEnabled = storedAutoRead === "true" ? true : false;
+                    autoReadToggle.checked = autoReadEnabled;
+
+                    // 토글 클릭이 TTS 버튼 클릭으로 전파되지 않도록 차단
+                    ["click", "mousedown", "mouseup"].forEach((ev) => {
+                        autoReadToggle.addEventListener(ev, (e) => e.stopPropagation());
+                        autoReadLabel.addEventListener(ev, (e) => e.stopPropagation());
+                    });
 
                     function setPauseIcon() {
                         ttsButtonIcon.classList.remove("fa-volume-up");
@@ -375,6 +422,11 @@
                         200,
                     );
 
+                    // 창 크기 변경 시 현재 문항에 맞춰 폰트 재조정
+                    window.addEventListener('resize', debounce(() => {
+                        if (currentIndex >= 0) adjustFontToFit();
+                    }, 150));
+
                     function displaySuggestion(
                         index,
                         suggestionsArray,
@@ -385,17 +437,43 @@
                             suggestionContent.textContent =
                                 suggestionsArray[index].content;
                             suggestionTimestamp.textContent = `제출 시간: ${suggestionsArray[index].timestamp}`;
-                            suggestionContent.style.fontSize =
-                                suggestionsArray[index].content.length > 120
-                                    ? "1.5rem"
-                                    : "2rem";
+                            adjustFontToFit();
+                        }
+                    }
+
+                    function adjustFontToFit() {
+                        const el = suggestionContent;
+                        if (!el || !el.textContent) return;
+
+                        // 사용 가능한 높이 계산: 컨테이너 높이 - 인덱스/타임스탬프/버튼 영역
+                        const containerH = qnaContainer.clientHeight;
+                        const indexH = suggestionIndex?.offsetHeight || 0;
+                        const tsH = suggestionTimestamp?.offsetHeight || 0;
+                        const btnH = buttonContainer?.offsetHeight || 0;
+                        const verticalGaps = 32; // 여백 보정
+                        const available = Math.max(80, containerH - indexH - tsH - btnH - verticalGaps);
+
+                        el.style.maxHeight = available + 'px';
+
+                        const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                        const maxPx = Math.round(2 * rootPx);   // 2rem
+                        const minPx = Math.round(1 * rootPx);   // 1rem
+                        let sizePx = maxPx;
+                        el.style.fontSize = sizePx + 'px';
+                        let guard = 0;
+
+                        // 넘치지 않을 때까지 1px 단위로 축소
+                        while (el.scrollHeight > el.clientHeight && sizePx > minPx && guard < 200) {
+                            sizePx -= 1;
+                            el.style.fontSize = sizePx + 'px';
+                            guard++;
                         }
                     }
 
                     async function loadSuggestions() {
                         try {
                             const querySnapshot = await getDocs(
-                                collection(db, "suggestions"),
+                                collection(db, COLLECTION_NAME), // 🔥 변수 사용
                             );
                             const suggestionsArray = [];
                             querySnapshot.forEach((doc) => {
@@ -430,12 +508,16 @@
                                     suggestionContent.style.fontSize = "2rem";
                                     prevButton.style.display = "none";
                                     ttsButton.style.display = "none";
+                                    if (autoReadLabel) autoReadLabel.style.display = "none";
+                                    if (buttonContainer) buttonContainer.style.justifyContent = "center";
                                     floatingJumpContainer.classList.remove(
                                         "visible",
                                     );
                                 } else {
                                     prevButton.style.display = "";
                                     ttsButton.style.display = "";
+                                    if (autoReadLabel) autoReadLabel.style.display = "";
+                                    if (buttonContainer) buttonContainer.style.justifyContent = "space-around";
                                     floatingJumpContainer.classList.add(
                                         "visible",
                                     );
@@ -445,7 +527,9 @@
                                         totalSuggestions,
                                     );
                                     ttsButton.disabled = false;
-                                    debouncedSpeak();
+                                    if (autoReadEnabled) {
+                                        debouncedSpeak();
+                                    }
                                 }
 
                                 prevButton.disabled = currentIndex <= 0;
@@ -492,6 +576,19 @@
                                     event.preventDefault();
                                     jumpButton.click();
                                 }
+                            });
+
+                            // 자동 읽기 토글 이벤트
+                            autoReadToggle.addEventListener("change", () => {
+                                autoReadEnabled = autoReadToggle.checked;
+                                localStorage.setItem(
+                                    "autoReadEnabled",
+                                    String(autoReadEnabled),
+                                );
+                                // 체크해도 즉시 읽지 않도록 아래 블록을 삭제했어
+                                // if (autoReadEnabled && suggestionContent.textContent) {
+                                //     debouncedSpeak();
+                                // }
                             });
 
                             ttsButton.addEventListener("click", () => {
