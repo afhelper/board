@@ -584,10 +584,10 @@
                                     "autoReadEnabled",
                                     String(autoReadEnabled),
                                 );
-                                // 켜는 순간 현재 문항이 있으면 즉시 읽기 시도
-                                if (autoReadEnabled && suggestionContent.textContent) {
-                                    debouncedSpeak();
-                                }
+                                // 체크해도 즉시 읽지 않도록 아래 블록을 삭제했어
+                                // if (autoReadEnabled && suggestionContent.textContent) {
+                                //     debouncedSpeak();
+                                // }
                             });
 
                             ttsButton.addEventListener("click", () => {
