@@ -306,6 +306,7 @@
             };
 
             const CLOUD_FUNCTION_URL = "https://asia-northeast3-submit-33eb1.cloudfunctions.net/googleTTS";
+            const COLLECTION_NAME = "suggestions"; // 🔥 새 변수 추가
 
             let currentAudio = null;
             let isSpeaking = false;
@@ -472,7 +473,7 @@
                     async function loadSuggestions() {
                         try {
                             const querySnapshot = await getDocs(
-                                collection(db, "suggestions"),
+                                collection(db, COLLECTION_NAME), // 🔥 변수 사용
                             );
                             const suggestionsArray = [];
                             querySnapshot.forEach((doc) => {
