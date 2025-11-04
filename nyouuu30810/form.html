@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>to 이주하💖</title>
+    <title>익명 QnA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .h-screen {
@@ -41,12 +41,10 @@
 
 <body class="flex items-center justify-center min-h-screen bg-gray-100 h-screen">
     <div class="w-full max-w-md p-8 space-y-2 bg-white rounded-lg shadow-md">
-        <h2 class="text-2xl font-bold text-center text-gray-700">to 이주하💖</h2>
+        <h2 class="text-2xl font-bold text-center text-gray-700">엑셀 여캠들의 모든 것</h2>
 
-        <!-- 이미지 공간 -->
         <div class="flex justify-center">
-            <img src="https://stimg.sooplive.co.kr/LOGO/ny/nyouuu30810/m/nyouuu30810.webp" alt="첨부 이미지"
-                class="w-full bg-gray-200 rounded-md object-cover">
+            <img src="./collage.jpg" alt="첨부 이미지" class="w-full bg-gray-200 rounded-md object-cover">
         </div>
 
         <form id="suggestionForm">
@@ -54,7 +52,7 @@
                 <div>
                     <textarea id="suggestion" rows="4" maxlength="200"
                         class="w-full px-4 py-2 mt-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="메시지를 입력하세요 (최대 200자)" required></textarea>
+                        placeholder="메시지를 입력하세요 (최대 200자, 이주하 , 지효, 히나, 조아라 에게 질문하기)" required></textarea>
                 </div>
             </div>
 
@@ -62,8 +60,7 @@
                 <button type="submit"
                     class="submit-button w-full px-4 py-2 font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative">
                     <span class="button-text">제출하기</span>
-                    <span class="spinner hidden"></span> <!-- 로딩 스피너 -->
-                </button>
+                    <span class="spinner hidden"></span> </button>
             </div>
         </form>
     </div>
@@ -74,8 +71,7 @@
         // Firebase SDK를 모듈로 import
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
         import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-        // onAuthStateChanged를 추가로 import
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
         console.log("Firebase 모듈 임포트 완료");
 
         const firebaseConfig = {
@@ -87,44 +83,50 @@
             appId: "1:123176179541:web:c40f2392c8b95fb93601dc"
         };
 
+        const COLLECTION_NAME = "suggestions2"; // 🔥 새 변수 추가
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth();
 
         console.log("Firebase 초기화 완료");
 
-        // --- 인증 처리를 위한 새로운 함수 ---
-        const getAuthenticatedUser = () => {
-            return new Promise((resolve, reject) => {
-                // onAuthStateChanged는 인증 상태가 변경될 때마다 호출되지만,
-                // 한번만 호출해서 현재 상태를 가져오기 위해 unsubscribe를 사용한다.
-                const unsubscribe = onAuthStateChanged(auth, (user) => {
-                    unsubscribe(); // 첫 상태를 받은 후 리스너를 제거하여 중복 호출 방지
-                    if (user) {
-                        // 이미 로그인된 사용자(관리자 또는 이전 익명 사용자)가 있으면 반환
-                        console.log("기존 사용자 확인:", user.uid);
-                        resolve(user);
-                    } else {
-                        // 로그인된 사용자가 없으면 익명으로 로그인
-                        console.log("로그인된 사용자 없음. 익명 로그인 시도.");
-                        signInAnonymously(auth)
-                            .then(userCredential => {
-                                console.log("새로운 익명 사용자 로그인 성공:", userCredential.user.uid);
-                                resolve(userCredential.user);
-                            })
-                            .catch(error => {
-                                console.error("익명 로그인 실패:", error);
-                                reject(error);
-                            });
-                    }
-                }, (error) => {
-                    // onAuthStateChanged 자체에서 에러가 발생한 경우
-                    console.error("onAuthStateChanged 에러:", error);
-                    unsubscribe();
-                    reject(error);
-                });
-            });
-        };
+        async function getUserIdentifier() {
+            console.log("getUserIdentifier 함수 호출");
+            try {
+                const auth = getAuth();
+                const userCredential = await signInAnonymously(auth);
+                const uid = userCredential.user.uid;
+                console.log("사용자 uid:", uid);
+                return uid;
+            } catch (error) {
+                console.error("사용자 식별자 가져오기 오류:", error);
+                return "unknown";
+            }
+        }
+
+        async function getLastSubmission(userIdentifier) {
+            console.log("getLastSubmission 함수 호출", userIdentifier);
+            try {
+                const q = query(
+                    collection(db, COLLECTION_NAME),
+                    where('userIdentifier', '==', userIdentifier),
+                    orderBy('timestamp', 'desc'),
+                    limit(1)
+                );
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    console.log("마지막 제출 시간 찾음");
+                    const lastSubmissionData = querySnapshot.docs[0].data();
+                    const lastSubmissionTimestamp = lastSubmissionData.timestamp.toDate();
+                    return lastSubmissionTimestamp;
+                }
+                console.log("이전 제출 없음");
+                return null;
+            } catch (error) {
+                console.error("마지막 제출 시간 확인 오류:", error);
+                return null;
+            }
+        }
 
         // 폼 제출 이벤트 리스너 수정
         document.getElementById('suggestionForm').addEventListener('submit', async (e) => {
@@ -135,64 +137,50 @@
             const spinner = submitButton.querySelector('.spinner');
             const buttonText = submitButton.querySelector('.button-text');
 
-            submitButton.disabled = true;
-            spinner.classList.remove('hidden');
-            buttonText.classList.add('hidden');
+            const suggestionText = document.getElementById('suggestion').value; // 메시지 내용 가져오기
 
-            const suggestion = document.getElementById('suggestion').value;
+            submitButton.disabled = true;  // 제출 버튼 비활성화
+            spinner.classList.remove('hidden');  // 스피너 표시
+            buttonText.classList.add('hidden');  // 텍스트 숨기기
 
             try {
-                // 1. 인증된 사용자 정보 가져오기 (가장 먼저 실행)
-                const user = await getAuthenticatedUser();
-                const userIdentifier = user.uid;
+                const userIdentifier = await getUserIdentifier();
                 console.log("사용자 식별자:", userIdentifier);
 
-                // 2. 마지막 제출 시간 확인
-                const q = query(
-                    collection(db, 'suggestions2'),
-                    where('userIdentifier', '==', userIdentifier),
-                    orderBy('timestamp', 'desc'),
-                    limit(1)
-                );
-                const querySnapshot = await getDocs(q);
+                const lastSubmission = await getLastSubmission(userIdentifier);
                 const now = new Date();
 
-                if (!querySnapshot.empty) {
-                    const lastSubmissionTimestamp = querySnapshot.docs[0].data().timestamp.toDate();
-                    if ((now - lastSubmissionTimestamp) < (1 * 60 * 1000)) {
-                        console.log("1분 내 재제출 시도");
-                        alert('1분 이내에는 한 번만 제출할 수 있습니다.');
-                        // finally 블록을 실행시키기 위해 여기서 return.
-                        // return을 해도 finally는 항상 실행된다.
-                        return;
-                    }
+                if (lastSubmission && (now - lastSubmission) < (5 * 60 * 1000)) {
+                    console.log("5분 내 재제출 시도");
+                    alert('5분 내 중복제출 불가');
+                    submitButton.disabled = false;  // 제출 버튼 다시 활성화
+                    spinner.classList.add('hidden');  // 스피너 숨기기
+                    buttonText.classList.remove('hidden');  // 텍스트 복구
+                    return;
                 }
 
-                // 3. Firestore에 데이터 저장
                 console.log("Firestore에 저장 시도:", {
-                    content: suggestion,
+                    content: suggestionText, // @ 없이 원본 메시지 저장
                     timestamp: serverTimestamp(),
                     userIdentifier: userIdentifier
                 });
 
-                await addDoc(collection(db, 'suggestions2'), {
-                    content: suggestion,
+                const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+                    content: suggestionText, // @ 없이 원본 메시지 저장
                     timestamp: serverTimestamp(),
                     userIdentifier: userIdentifier
                 });
 
-                console.log("문서 저장 완료.");
+                console.log("문서 저장 완료. 문서 ID:", docRef.id);
                 alert('성공적으로 제출되었습니다.');
-                document.getElementById('suggestion').value = '';
-
+                document.getElementById('suggestion').value = ''; // 메시지 입력창 비우기
             } catch (error) {
                 console.error("오류 발생:", error);
                 alert('오류가 발생했습니다. 나중에 다시 시도해주세요.');
             } finally {
-                // try 블록에서 return을 하더라도 이 부분은 실행된다.
-                submitButton.disabled = false;
-                spinner.classList.add('hidden');
-                buttonText.classList.remove('hidden');
+                submitButton.disabled = false;  // 제출 버튼 다시 활성화
+                spinner.classList.add('hidden');  // 스피너 숨기기
+                buttonText.classList.remove('hidden');  // 텍스트 복구
             }
         });
 
