@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>review</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h2 id="suggestionsCount" class="text-xl font-bold mb-4 text-center"></h2>
+        <div id="suggestionsList" class="space-y-4"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, orderBy, doc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js"; // deleteDoc는 사용하지 않으므로 제거 가능
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBeIPr1H_de7eIZUagNAUvPbw-rYRteP9U",
+            authDomain: "submit-33eb1.firebaseapp.com",
+            projectId: "submit-33eb1",
+            storageBucket: "submit-33eb1.appspot.com",
+            messagingSenderId: "123176179541",
+            appId: "1:123176179541:web:c40f2392c8b95fb93601dc"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth();
+
+        const suggestionsList = document.getElementById('suggestionsList');
+        let totalSuggestions = 0;
+
+        signInAnonymously(auth).then(() => {
+            console.log("익명 사용자로 로그인 성공");
+            loadSuggestions();
+        }).catch((error) => {
+            console.error("익명 로그인 실패:", error);
+            showError("로그인에 실패했습니다. 페이지를 새로고침 해주세요.");
+        });
+
+        async function loadSuggestions() {
+            try {
+                const q = query(collection(db, 'suggestions2'), orderBy('timestamp', 'desc'));
+                const querySnapshot = await getDocs(q);
+                suggestionsList.innerHTML = '';
+                totalSuggestions = querySnapshot.size;
+
+                const suggestionsCountElement = document.getElementById('suggestionsCount');
+                suggestionsCountElement.textContent = `총 ${totalSuggestions}개 QnA`;
+
+                if (querySnapshot.empty) {
+                    suggestionsList.innerHTML = '<p class="text-gray-500 text-center">현재 QnA가 없습니다.</p>';
+                } else {
+                    let index = 0; // forEach 루프 내에서 1부터 시작하도록 수정
+                    querySnapshot.forEach((docSnapshot) => { // doc 대신 docSnapshot 사용 (위의 doc과 충돌 방지)
+                        index++;
+                        const suggestionData = docSnapshot.data();
+                        // createSuggestionElement에 전달하는 index는 현재 화면에 표시되는 순서 (1부터 시작, 최신글이 1번)
+                        const suggestionElement = createSuggestionElement(suggestionData, docSnapshot.id, index, totalSuggestions);
+                        suggestionsList.appendChild(suggestionElement);
+                    });
+                }
+            } catch (error) {
+                console.error("건의 목록 로딩 실패:", error);
+                showError("건의 목록을 불러오는 데 실패했습니다. 나중에 다시 시도해 주세요.");
+            }
+        }
+
+        function createSuggestionElement(data, docId, displayIndex, totalCount) {
+            const element = document.createElement('div');
+            element.className = 'bg-white shadow-md rounded-lg p-4';
+            const content = escapeHtml(data.content);
+            element.innerHTML = `
+                <p class="text-lg mb-2">${content}</p>
+                <div class="flex justify-end items-center">
+                    <span class="text-sm text-gray-500">${formatTimestamp(data.timestamp.toDate())}</span>
+                    <button onclick="copySuggestion(this, '${docId}', ${displayIndex}, ${totalCount})" class="ml-4 bg-green-500 text-white px-3 py-1 rounded">복사</button>
+                </div>
+            `;
+            return element;
+        }
+
+        function formatTimestamp(date) {
+            return date.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe.replace(/[&<"']/g, function (m) {
+                switch (m) {
+                    case '&': return '&amp;';
+                    case '<': return '&lt;';
+                    case '"': return '&quot;';
+                    default: return '&#039;';
+                }
+            });
+        }
+
+        function showError(message, isSuccess = false) {
+            const errorElement = document.createElement('div');
+            errorElement.className = `${isSuccess ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'} px-4 py-3 rounded relative mb-4`;
+            errorElement.innerHTML = message;
+            
+            // 메시지가 중앙 상단에 나타나도록 스타일 추가
+            errorElement.style.position = 'fixed';
+            errorElement.style.top = '20px';
+            errorElement.style.left = '50%';
+            errorElement.style.transform = 'translateX(-50%)';
+            errorElement.style.zIndex = '1000';
+            errorElement.style.padding = '10px 20px';
+            errorElement.style.borderRadius = '5px';
+            
+            document.body.appendChild(errorElement); // suggestionsList 대신 body에 추가하여 다른 요소에 가려지지 않도록 함
+            setTimeout(() => errorElement.remove(), 3000); // 3초 후 메시지 자동 제거
+        }
+        
+        // 전역 함수로 copySuggestion 수정
+        // displayIndex는 화면에 표시된 순서 (최신글이 1번)
+        window.copySuggestion = async function (buttonElement, docId, displayIndex, totalCount) {
+            try {
+                const suggestionDiv = buttonElement.closest('.bg-white.shadow-md.rounded-lg.p-4');
+                const contentElement = suggestionDiv.querySelector('.text-lg.mb-2');
+                const originalContent = contentElement.textContent;
+
+                // 사용자가 원하는 순서로 변경: 최신글이 totalCount, 가장 오래된 글이 1
+                const actualDisplayOrder = totalCount - displayIndex + 1;
+
+                const textToCopy = `(${actualDisplayOrder}/${totalCount})\n${originalContent}`;
+                await navigator.clipboard.writeText(textToCopy);
+                showError('클립보드에 복사되었습니다!', true); 
+                console.log("내용 복사 성공:", textToCopy);
+            } catch (error) {
+                console.error("클립보드 복사 실패:", error);
+                showError("클립보드 복사에 실패했습니다.");
+            }
+        };
+    </script>
+</body>
+
+</html>
