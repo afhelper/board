@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -7,120 +8,369 @@
   <title>9월 15일 YMSS 뉴시그</title>
   <style>
     :root {
-      --bg: #121212; --panel: #1d1d1d; --active: #29211f; --line: #303030;
-      --text: #f5f3ee; --muted: #aaa7a1; --accent: #ff6948; --link: #a9ef8d;
+      --bg: #121212;
+      --panel: #1d1d1d;
+      --active: #29211f;
+      --line: #303030;
+      --text: #f5f3ee;
+      --muted: #aaa7a1;
+      --accent: #ff6948;
+      --link: #a9ef8d;
     }
-    * { box-sizing: border-box; }
-    html { color-scheme: dark; }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      color-scheme: dark;
+    }
+
     body {
-      margin: 0; min-width: 320px; background: var(--bg); color: var(--text);
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-      -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
     }
-    button, input { font: inherit; }
+
+    button,
+    input {
+      font: inherit;
+    }
+
     .page {
-      width: min(100%, 720px); margin: 0 auto;
+      width: min(100%, 720px);
+      margin: 0 auto;
       padding: 0 14px calc(164px + env(safe-area-inset-bottom));
     }
+
     .header {
-      position: sticky; z-index: 5; top: 0; display: flex; align-items: center;
-      justify-content: space-between; min-height: 66px;
+      position: sticky;
+      z-index: 5;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 66px;
       padding: calc(8px + env(safe-area-inset-top)) 4px 8px;
-      border-bottom: 1px solid var(--line); background: rgba(18,18,18,.94);
+      border-bottom: 1px solid var(--line);
+      background: rgba(18, 18, 18, .94);
       backdrop-filter: blur(14px);
     }
-    h1 { margin: 0; font-size: 21px; font-weight: 750; letter-spacing: -.04em; }
-    .track-count { color: var(--muted); font-size: 13px; }
-    .track-list { padding-top: 8px; }
+
+    h1 {
+      margin: 0;
+      font-size: 21px;
+      font-weight: 750;
+      letter-spacing: -.04em;
+    }
+
+    .track-count {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .track-list {
+      padding-top: 8px;
+    }
+
     .track {
-      display: grid; grid-template-columns: 50px minmax(0,1fr) auto; gap: 12px;
-      align-items: center; min-height: 94px; margin-bottom: 8px; padding: 14px 12px;
-      border: 1px solid var(--line); border-radius: 15px; background: var(--panel);
-      cursor: pointer; transition: background .16s, border-color .16s, transform .1s;
+      display: grid;
+      grid-template-columns: 50px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 94px;
+      margin-bottom: 8px;
+      padding: 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--panel);
+      cursor: pointer;
+      transition: background .16s, border-color .16s, transform .1s;
     }
-    .track:active { transform: scale(.985); }
-    .track.active { border-color: rgba(255,105,72,.55); background: var(--active); }
+
+    .track:active {
+      transform: scale(.985);
+    }
+
+    .track.active {
+      border-color: rgba(255, 105, 72, .55);
+      background: var(--active);
+    }
+
     .play-button {
-      display: grid; place-items: center; width: 48px; height: 48px; padding: 0;
-      border: 0; border-radius: 50%; background: #323232; color: var(--text); cursor: pointer;
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: #323232;
+      color: var(--text);
+      cursor: pointer;
     }
-    .track.active .play-button { background: var(--accent); color: #1a0d09; }
-    .play-icon { width: 19px; height: 19px; margin-left: 2px; fill: currentColor; }
-    .pause-bars { display: none; align-items: center; gap: 4px; }
-    .pause-bars i { display: block; width: 4px; height: 17px; border-radius: 2px; background: currentColor; }
-    .track.playing .play-icon { display: none; }
-    .track.playing .pause-bars { display: flex; }
-    .track-info { min-width: 0; }
-    .title-row { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+
+    .track.active .play-button {
+      background: var(--accent);
+      color: #1a0d09;
+    }
+
+    .play-icon {
+      width: 19px;
+      height: 19px;
+      margin-left: 2px;
+      fill: currentColor;
+    }
+
+    .pause-bars {
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pause-bars i {
+      display: block;
+      width: 4px;
+      height: 17px;
+      border-radius: 2px;
+      background: currentColor;
+    }
+
+    .track.playing .play-icon {
+      display: none;
+    }
+
+    .track.playing .pause-bars {
+      display: flex;
+    }
+
+    .track-info {
+      min-width: 0;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+    }
+
     .title {
-      overflow: hidden; font-size: 18px; font-weight: 700; letter-spacing: -.025em;
-      text-overflow: ellipsis; white-space: nowrap;
+      overflow: hidden;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -.025em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .price { flex: none; color: var(--accent); font-size: 14px; font-weight: 750; }
+
+    .price {
+      flex: none;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
     .description {
-      margin: 7px 0 0; color: var(--muted); font-size: 14px;
-      line-height: 1.5; word-break: keep-all;
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: keep-all;
     }
+
     .duration {
-      align-self: start; padding-top: 3px; color: #777; font-size: 11px;
+      align-self: start;
+      padding-top: 3px;
+      color: #777;
+      font-size: 11px;
       font-variant-numeric: tabular-nums;
     }
+
     .video-link {
-      position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 7px;
-      width: 100%; min-height: 46px; margin-top: 11px; padding: 0 14px;
-      border: 1px solid rgba(169,239,141,.32); border-radius: 11px;
-      background: rgba(169,239,141,.08); color: var(--link);
-      font-size: 14px; font-weight: 750; text-decoration: none; cursor: pointer;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      width: 100%;
+      min-height: 46px;
+      margin-top: 11px;
+      padding: 0 14px;
+      border: 1px solid rgba(169, 239, 141, .32);
+      border-radius: 11px;
+      background: rgba(169, 239, 141, .08);
+      color: var(--link);
+      font-size: 14px;
+      font-weight: 750;
+      text-decoration: none;
+      cursor: pointer;
     }
-    .video-link:active { background: rgba(169,239,141,.16); }
-    .video-link svg { width: 17px; height: 17px; }
-    .video-link .external-icon { margin-left: auto; }
+
+    .video-link:active {
+      background: rgba(169, 239, 141, .16);
+    }
+
+    .video-link svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .video-link .external-icon {
+      margin-left: auto;
+    }
+
     .player {
-      position: fixed; z-index: 10; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px;
-      display: none; width: min(calc(100% - 20px),700px); min-height: 132px; margin: auto;
-      padding: 14px 16px 13px; border: 1px solid #404040; border-radius: 18px;
-      background: rgba(31,31,31,.97); box-shadow: 0 14px 45px rgba(0,0,0,.5);
+      position: fixed;
+      z-index: 10;
+      right: 10px;
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      left: 10px;
+      display: none;
+      width: min(calc(100% - 20px), 700px);
+      min-height: 132px;
+      margin: auto;
+      padding: 14px 16px 13px;
+      border: 1px solid #404040;
+      border-radius: 18px;
+      background: rgba(31, 31, 31, .97);
+      box-shadow: 0 14px 45px rgba(0, 0, 0, .5);
       backdrop-filter: blur(18px);
     }
-    .player.visible { display: block; }
+
+    .player.visible {
+      display: block;
+    }
+
     .player-top {
-      display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center;
-      gap: 12px; min-height: 52px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 52px;
     }
-    .now-playing { min-width: 0; }
-    .now-playing small { color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+
+    .now-playing {
+      min-width: 0;
+    }
+
+    .now-playing small {
+      color: var(--accent);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .12em;
+    }
+
     .now-playing strong {
-      display: block; overflow: hidden; margin-top: 4px; font-size: 14px;
-      text-overflow: ellipsis; white-space: nowrap;
+      display: block;
+      overflow: hidden;
+      margin-top: 4px;
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    .controls { display: flex; align-items: center; gap: 4px; }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     .control-button {
-      display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
-      border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
     }
-    .control-button:active { background: rgba(255,255,255,.08); }
-    .control-button.main { width: 50px; height: 50px; background: var(--text); color: var(--bg); }
-    .control-button.main:active { background: var(--accent); }
+
+    .control-button:active {
+      background: rgba(255, 255, 255, .08);
+    }
+
+    .control-button.main {
+      width: 50px;
+      height: 50px;
+      background: var(--text);
+      color: var(--bg);
+    }
+
+    .control-button.main:active {
+      background: var(--accent);
+    }
+
     .timeline {
-      display: grid; grid-template-columns: 35px minmax(0,1fr) 35px;
-      align-items: center; gap: 8px; margin-top: 9px;
+      display: grid;
+      grid-template-columns: 35px minmax(0, 1fr) 35px;
+      align-items: center;
+      gap: 8px;
+      margin-top: 9px;
     }
-    .timeline time { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
-    .timeline time:last-child { text-align: right; }
-    .seek { width: 100%; height: 24px; margin: 0; accent-color: var(--accent); cursor: pointer; }
-    .hidden { display: none !important; }
+
+    .timeline time {
+      color: var(--muted);
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timeline time:last-child {
+      text-align: right;
+    }
+
+    .seek {
+      width: 100%;
+      height: 24px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
     @media (min-width: 640px) {
-      .page { padding-right: 20px; padding-left: 20px; }
-      .header { min-height: 76px; }
-      .track { min-height: 102px; padding: 16px; }
-      .title { font-size: 19px; }
-      .player { padding-right: 20px; padding-left: 20px; }
+      .page {
+        padding-right: 20px;
+        padding-left: 20px;
+      }
+
+      .header {
+        min-height: 76px;
+      }
+
+      .track {
+        min-height: 102px;
+        padding: 16px;
+      }
+
+      .title {
+        font-size: 19px;
+      }
+
+      .player {
+        padding-right: 20px;
+        padding-left: 20px;
+      }
     }
   </style>
 </head>
+
 <body>
   <main class="page">
-    <header class="header"><h1>9월 15일 YMSS 뉴시그</h1><span class="track-count">11곡</span></header>
+    <header class="header">
+      <h1>9월 15일 YMSS 뉴시그</h1><span class="track-count">11곡</span>
+    </header>
     <section class="track-list" id="trackList" aria-label="음원 목록"></section>
   </main>
 
@@ -129,14 +379,22 @@
       <div class="now-playing"><small>재생 중</small><strong id="nowTitle">곡을 선택해 주세요</strong></div>
       <div class="controls">
         <button class="control-button" id="prev" type="button" aria-label="이전 곡">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+          </svg>
         </button>
         <button class="control-button main" id="mainPlay" type="button" aria-label="재생">
-          <svg class="main-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          <svg class="main-pause-icon hidden" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+          <svg class="main-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <svg class="main-pause-icon hidden" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
+          </svg>
         </button>
         <button class="control-button" id="next" type="button" aria-label="다음 곡">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z" />
+          </svg>
         </button>
       </div>
     </div>
@@ -155,7 +413,7 @@
       { price: '352000', title: 'Big Love', file: 'audio/352000_Big Love.mp3', duration: '0:45', note: '천이주 프리댄스' },
       { price: '380000', title: 'U Make Me', file: 'audio/380000_U Make Me.m4a', duration: '0:46', note: '공 안던지는 오승환개(=Light it up), 웨이브는 안 어울림, 절도 있게', link: 'https://youtu.be/81j-DqUI3j4' },
       { price: '430000', title: '초월', file: 'audio/430000_초월.m4a', duration: '0:49', note: '부채춤 범용' },
-      { price: '499900', title: 'Fighter', file: 'audio/499900_Fighter.mp3', duration: '0:46', note: '상한가+세비지 매시업 리믹스 (음원 기준 15~30초 = 스텝 밟기, 뒷부분은 박세라 영상 참조)', link: 'https://vod.sooplive.com/player/175966273?change_second=21' },
+      { price: '499900', title: 'Fighter', file: 'audio/499900_Fighter.mp3', duration: '0:46', note: '상한가+슈퍼세비지 매시업 리믹스 (음원 기준 15~30초 = 스텝 밟기, 뒷부분은 영상 참조)', link: 'https://vod.sooplive.com/player/175966273?change_second=21' },
       { price: '505000', title: 'Moonlight', file: 'audio/505000_Moonlight.m4a', duration: '0:46', note: '프리댄스 범용' },
       { price: '552200', title: 'Highest', file: 'audio/552200_Highest.m4a', duration: '0:44', note: '냥냥수주 프리댄스 (Lordly 리믹스)' },
       { price: '555500', title: '슈퍼 복고댄스', file: 'audio/555500_슈퍼 복고댄스.mp3', duration: '0:36', note: '복고댄스 확장 버전', link: 'https://vod.sooplive.com/player/108624942' },
@@ -272,4 +530,5 @@
     window.addEventListener('pageshow', restorePageState);
   </script>
 </body>
+
 </html>
