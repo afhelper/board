@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121212">
+  <title>9월 15일 YMSS 뉴시그</title>
+  <style>
+    :root {
+      --bg: #121212; --panel: #1d1d1d; --active: #29211f; --line: #303030;
+      --text: #f5f3ee; --muted: #aaa7a1; --accent: #ff6948; --link: #a9ef8d;
+    }
+    * { box-sizing: border-box; }
+    html { color-scheme: dark; }
+    body {
+      margin: 0; min-width: 320px; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+    }
+    button, input { font: inherit; }
+    .page {
+      width: min(100%, 720px); margin: 0 auto;
+      padding: 0 14px calc(164px + env(safe-area-inset-bottom));
+    }
+    .header {
+      position: sticky; z-index: 5; top: 0; display: flex; align-items: center;
+      justify-content: space-between; min-height: 66px;
+      padding: calc(8px + env(safe-area-inset-top)) 4px 8px;
+      border-bottom: 1px solid var(--line); background: rgba(18,18,18,.94);
+      backdrop-filter: blur(14px);
+    }
+    h1 { margin: 0; font-size: 21px; font-weight: 750; letter-spacing: -.04em; }
+    .track-count { color: var(--muted); font-size: 13px; }
+    .track-list { padding-top: 8px; }
+    .track {
+      display: grid; grid-template-columns: 50px minmax(0,1fr) auto; gap: 12px;
+      align-items: center; min-height: 94px; margin-bottom: 8px; padding: 14px 12px;
+      border: 1px solid var(--line); border-radius: 15px; background: var(--panel);
+      cursor: pointer; transition: background .16s, border-color .16s, transform .1s;
+    }
+    .track:active { transform: scale(.985); }
+    .track.active { border-color: rgba(255,105,72,.55); background: var(--active); }
+    .play-button {
+      display: grid; place-items: center; width: 48px; height: 48px; padding: 0;
+      border: 0; border-radius: 50%; background: #323232; color: var(--text); cursor: pointer;
+    }
+    .track.active .play-button { background: var(--accent); color: #1a0d09; }
+    .play-icon { width: 19px; height: 19px; margin-left: 2px; fill: currentColor; }
+    .pause-bars { display: none; align-items: center; gap: 4px; }
+    .pause-bars i { display: block; width: 4px; height: 17px; border-radius: 2px; background: currentColor; }
+    .track.playing .play-icon { display: none; }
+    .track.playing .pause-bars { display: flex; }
+    .track-info { min-width: 0; }
+    .title-row { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+    .title {
+      overflow: hidden; font-size: 18px; font-weight: 700; letter-spacing: -.025em;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .price { flex: none; color: var(--accent); font-size: 14px; font-weight: 750; }
+    .description {
+      margin: 7px 0 0; color: var(--muted); font-size: 14px;
+      line-height: 1.5; word-break: keep-all;
+    }
+    .duration {
+      align-self: start; padding-top: 3px; color: #777; font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .video-link {
+      position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 7px;
+      width: 100%; min-height: 46px; margin-top: 11px; padding: 0 14px;
+      border: 1px solid rgba(169,239,141,.32); border-radius: 11px;
+      background: rgba(169,239,141,.08); color: var(--link);
+      font-size: 14px; font-weight: 750; text-decoration: none; cursor: pointer;
+    }
+    .video-link:active { background: rgba(169,239,141,.16); }
+    .video-link svg { width: 17px; height: 17px; }
+    .video-link .external-icon { margin-left: auto; }
+    .player {
+      position: fixed; z-index: 10; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); left: 10px;
+      display: none; width: min(calc(100% - 20px),700px); min-height: 132px; margin: auto;
+      padding: 14px 16px 13px; border: 1px solid #404040; border-radius: 18px;
+      background: rgba(31,31,31,.97); box-shadow: 0 14px 45px rgba(0,0,0,.5);
+      backdrop-filter: blur(18px);
+    }
+    .player.visible { display: block; }
+    .player-top {
+      display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center;
+      gap: 12px; min-height: 52px;
+    }
+    .now-playing { min-width: 0; }
+    .now-playing small { color: var(--accent); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+    .now-playing strong {
+      display: block; overflow: hidden; margin-top: 4px; font-size: 14px;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .controls { display: flex; align-items: center; gap: 4px; }
+    .control-button {
+      display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+      border: 0; border-radius: 50%; background: transparent; color: var(--text); cursor: pointer;
+    }
+    .control-button:active { background: rgba(255,255,255,.08); }
+    .control-button.main { width: 50px; height: 50px; background: var(--text); color: var(--bg); }
+    .control-button.main:active { background: var(--accent); }
+    .timeline {
+      display: grid; grid-template-columns: 35px minmax(0,1fr) 35px;
+      align-items: center; gap: 8px; margin-top: 9px;
+    }
+    .timeline time { color: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+    .timeline time:last-child { text-align: right; }
+    .seek { width: 100%; height: 24px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+    .hidden { display: none !important; }
+    @media (min-width: 640px) {
+      .page { padding-right: 20px; padding-left: 20px; }
+      .header { min-height: 76px; }
+      .track { min-height: 102px; padding: 16px; }
+      .title { font-size: 19px; }
+      .player { padding-right: 20px; padding-left: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header"><h1>9월 15일 YMSS 뉴시그</h1><span class="track-count">11곡</span></header>
+    <section class="track-list" id="trackList" aria-label="음원 목록"></section>
+  </main>
+
+  <aside class="player" id="player" aria-label="오디오 플레이어">
+    <div class="player-top">
+      <div class="now-playing"><small>재생 중</small><strong id="nowTitle">곡을 선택해 주세요</strong></div>
+      <div class="controls">
+        <button class="control-button" id="prev" type="button" aria-label="이전 곡">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+        </button>
+        <button class="control-button main" id="mainPlay" type="button" aria-label="재생">
+          <svg class="main-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="main-pause-icon hidden" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+        </button>
+        <button class="control-button" id="next" type="button" aria-label="다음 곡">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="timeline">
+      <time id="currentTime">0:00</time>
+      <input class="seek" id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="재생 위치">
+      <time id="totalTime">0:00</time>
+    </div>
+  </aside>
+  <audio id="audio" preload="metadata"></audio>
+
+  <script>
+    const tracks = [
+      { price: '169000', title: 'Kiss remix', file: 'audio/169000_Kiss remix.m4a', duration: '0:43', note: '프리댄스' },
+      { price: '337700', title: '청신호', file: 'audio/337700_청신호.m4a', duration: '0:47', note: '(구)광상 청아 신호탄', link: 'https://vod.sooplive.com/player/152756879/catch' },
+      { price: '352000', title: 'Big Love', file: 'audio/352000_Big Love.mp3', duration: '0:45', note: '천이주 프리댄스' },
+      { price: '380000', title: 'U Make Me', file: 'audio/380000_U Make Me.m4a', duration: '0:46', note: '공 안던지는 오승환개(=Light it up), 웨이브는 안 어울림, 절도 있게', link: 'https://youtu.be/81j-DqUI3j4' },
+      { price: '430000', title: '초월', file: 'audio/430000_초월.m4a', duration: '0:49', note: '부채춤 범용' },
+      { price: '499900', title: 'Fighter', file: 'audio/499900_Fighter.mp3', duration: '0:46', note: '상한가+세비지 매시업 리믹스 (음원 기준 15~30초 = 스텝 밟기, 뒷부분은 박세라 영상 참조)', link: 'https://vod.sooplive.com/player/175966273?change_second=21' },
+      { price: '505000', title: 'Moonlight', file: 'audio/505000_Moonlight.m4a', duration: '0:46', note: '프리댄스 범용' },
+      { price: '552200', title: 'Highest', file: 'audio/552200_Highest.m4a', duration: '0:44', note: '냥냥수주 프리댄스 (Lordly 리믹스)' },
+      { price: '555500', title: '슈퍼 복고댄스', file: 'audio/555500_슈퍼 복고댄스.mp3', duration: '0:36', note: '복고댄스 확장 버전', link: 'https://vod.sooplive.com/player/108624942' },
+      { price: '1220000', title: "Don't Let me down", file: 'audio/1220000_Dont Let me down.m4a', duration: '0:50', note: '레전드상한가+큰마르지엘라이 다른 리믹스' },
+      { price: '2099900', title: '폭풍', file: 'audio/2099900_폭풍.mp3', duration: '1:02', note: '민재 프리댄스' }
+    ];
+    const audio = document.querySelector('#audio');
+    const list = document.querySelector('#trackList');
+    const player = document.querySelector('#player');
+    const nowTitle = document.querySelector('#nowTitle');
+    const currentTime = document.querySelector('#currentTime');
+    const totalTime = document.querySelector('#totalTime');
+    const seek = document.querySelector('#seek');
+    const mainPlay = document.querySelector('#mainPlay');
+    let currentIndex = -1;
+    let pendingSeekTime = 0;
+    const pageStateKey = 'music-page-state';
+    const rowPlayIcon = '<svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span class="pause-bars"><i></i><i></i></span>';
+    const videoIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>';
+    const externalIcon = '<svg class="external-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3h7v7M10 14 21 3M21 14v7H3V3h7"/></svg>';
+
+    list.innerHTML = tracks.map((track, index) => `
+      <article class="track" data-index="${index}">
+        <button class="play-button" type="button" aria-label="${track.title} 재생">${rowPlayIcon}</button>
+        <div class="track-info">
+          <div class="title-row"><strong class="title">${track.title}</strong><span class="price">${Number(track.price).toLocaleString('ko-KR')}</span></div>
+          <p class="description">${track.note}</p>
+          ${track.link ? `<a class="video-link" href="${track.link}">${videoIcon}<span>참고 영상 보기</span>${externalIcon}</a>` : ''}
+        </div>
+        <span class="duration">${track.duration}</span>
+      </article>
+    `).join('');
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) return '0:00';
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+      return `${minutes}:${remainingSeconds}`;
+    }
+    function synchronizePlayer() {
+      document.querySelectorAll('.track').forEach((row, index) => {
+        row.classList.toggle('active', index === currentIndex);
+        row.classList.toggle('playing', index === currentIndex && !audio.paused);
+      });
+      document.querySelector('.main-play-icon').classList.toggle('hidden', !audio.paused);
+      document.querySelector('.main-pause-icon').classList.toggle('hidden', audio.paused);
+      mainPlay.setAttribute('aria-label', audio.paused ? '재생' : '일시 정지');
+    }
+    function loadTrack(index, autoplay = true, startTime = 0) {
+      currentIndex = (index + tracks.length) % tracks.length;
+      const track = tracks[currentIndex];
+      pendingSeekTime = startTime;
+      audio.src = encodeURI(track.file);
+      nowTitle.textContent = `${Number(track.price).toLocaleString('ko-KR')} · ${track.title}`;
+      player.classList.add('visible');
+      currentTime.textContent = '0:00'; totalTime.textContent = track.duration; seek.value = 0;
+      if (autoplay) audio.play().catch(() => synchronizePlayer());
+      synchronizePlayer();
+    }
+    function togglePlayback() {
+      if (currentIndex < 0) { loadTrack(0); return; }
+      if (audio.paused) audio.play(); else audio.pause();
+    }
+    function savePageState() {
+      const state = {
+        currentIndex,
+        currentTime: audio.currentTime || 0,
+        scrollY: window.scrollY,
+        returnPending: true
+      };
+      try { sessionStorage.setItem(pageStateKey, JSON.stringify(state)); } catch (error) { /* 저장이 제한된 환경은 기본 뒤로가기를 사용합니다. */ }
+      audio.pause();
+    }
+    function restorePageState() {
+      let state;
+      try {
+        state = JSON.parse(sessionStorage.getItem(pageStateKey));
+        if (!state?.returnPending) return;
+        sessionStorage.removeItem(pageStateKey);
+      } catch (error) { return; }
+      if (state.currentIndex >= 0 && state.currentIndex < tracks.length) {
+        loadTrack(state.currentIndex, false, Number(state.currentTime) || 0);
+      }
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, Number(state.scrollY) || 0)));
+    }
+    list.addEventListener('click', (event) => {
+      if (event.target.closest('.video-link')) { savePageState(); return; }
+      const row = event.target.closest('.track');
+      if (!row) return;
+      const index = Number(row.dataset.index);
+      if (index === currentIndex) togglePlayback(); else loadTrack(index);
+    });
+    mainPlay.addEventListener('click', togglePlayback);
+    document.querySelector('#prev').addEventListener('click', () => loadTrack(currentIndex < 0 ? 0 : currentIndex - 1));
+    document.querySelector('#next').addEventListener('click', () => loadTrack(currentIndex < 0 ? 0 : currentIndex + 1));
+    audio.addEventListener('play', synchronizePlayer);
+    audio.addEventListener('pause', synchronizePlayer);
+    audio.addEventListener('ended', () => loadTrack(currentIndex + 1));
+    audio.addEventListener('loadedmetadata', () => {
+      totalTime.textContent = formatTime(audio.duration);
+      if (pendingSeekTime > 0) {
+        audio.currentTime = Math.min(pendingSeekTime, audio.duration || pendingSeekTime);
+        currentTime.textContent = formatTime(audio.currentTime);
+        pendingSeekTime = 0;
+      }
+    });
+    audio.addEventListener('timeupdate', () => {
+      currentTime.textContent = formatTime(audio.currentTime);
+      seek.value = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+    });
+    seek.addEventListener('input', () => {
+      if (audio.duration) audio.currentTime = (Number(seek.value) / 100) * audio.duration;
+    });
+    window.addEventListener('pageshow', restorePageState);
+  </script>
+</body>
+</html>
